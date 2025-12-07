@@ -28,42 +28,10 @@ fullname="$forename $initial $surname $suffix"; fullname=$(echo "$fullname" | xa
 address="$street, $town, $state $zipcode $country"
 
 # Convert License Class
-case "$licenseclass" in
- "T")
-  licenseclass="Technician"
-  ;;
- "G")
-  licenseclass="General"
-  ;;
- "E")
-  licenseclass="Extra"
-  ;;
- "N")
-  licesnseclass="Novice"
-  ;;
-  "A")
-  licenseclass "Advanced"
-  ;;
- *)
-  licenseclass="Station Callsign"
-  ;;
-esac
+case "$licenseclass" in "T") licenseclass="Technician" ;; "G") licenseclass="General" ;; "E") licenseclass="Extra" ;; "N") licesnseclass="Novice" ;; "A") licenseclass "Advanced" ;; *) licenseclass="Station Callsign" ;; esac
 
 # Convert License Status
-case "$status" in
- "A")
-  status="Active"
-  ;;
- "E")
-  status="Expired"
-  ;;
- "P")
-  status="Pending"
-  ;;
- *)
-  status="Unknown"
-  ;;
-esac
+case "$status" in "A") status="Active" ;; "E") status="Expired" ;; "P") status="Pending" ;; *) status="Unknown" ;; esac
 
 printf '\nThe details held by the FCC for %s are:\n\n' "$callsign"
 printf 'License:\t%s - Expiry %s (%s)\nName:\t\t%s\nAddress:\t%s\nCoordinates:\tGrid: %s Latitude: %s Longitude %s\n\n' "$licenseclass" "$licenseexpiry" "$status" "$fullname" "$address" "$grid" "$lat" "$lon"
