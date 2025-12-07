@@ -24,6 +24,7 @@ done
 }
 
 # Variables
+axnodepass=$(openssl rand -base64 12 | tr -dc A-Za-z0-9 | head -c10)
 RED='\e[31m'
 NC='\e[0m'  
     
@@ -85,8 +86,6 @@ printf '\nThis may take some time ...\n\n'
 
 exit 0
 
-# Clone from GitHub and move into place
-
 # Set Environment & PATH
 if ! grep -qF "# DigiHub Installation" "$HomePath/.profile"; then
  echo -e "\n# DigiHub Installation" >> "$HomePath/.profile"
@@ -101,7 +100,7 @@ if ! grep -qF "$ScriptPath" "$HomePath/.profile"; then
 fi
 
 # Move files & directories into place
-mc $InstallPath/DigiHub $DigiHubHome
+mv $InstallPath/DigiHub $DigiHubHome
 
 # Ensure Script Permissions
 chmod +x $ScriptPath/* $PythonPath/*n'
