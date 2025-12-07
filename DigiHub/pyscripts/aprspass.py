@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# 9m2pju-passcode-generator.py
 
 def aprs_passcode(callsign: str) -> int:
     callsign = callsign.upper().split('-')[0]  # Remove SSID if present
