@@ -8,6 +8,26 @@
 # Steve de Bode - KQ4ZCI - December 2025
 #
 
+# Functions
+
+function YnContinue {
+ while true; do
+ printf 'Do you wish to continue (Y/n) '; read -n1 -r response
+ case $response in Y|y) printf '\n'; break ;; N|n) printf '\nInstallation aborted.\n'; exit 0 ;; *) printf '\nInvalid response, please select (Y/n)\n' ;; esac
+done
+}
+
+# Variables
+RED='\e[31m'
+NC='\e[0m'  
+    
+# Script Directories
+HomePath="/home/$USER"
+DigiHubHome="$HomePath/DigiHub"
+ScriptPath="$DigiHubHome/scripts"
+venv_dir="$DigiHubHome/.digihub-venv"
+PythonPath="$DigiHubHome/pyscripts"
+
 # Check Parameters
 if [ "$#" -ne "1" ]; then
   printf '\nUsage: %s <callsign>\n\n' "$0" >&2
@@ -21,7 +41,7 @@ if [ $? -ne 0 ]; then
  exit 1
 fi
 
-# Get Home QTH & Check Valid
+# Get Home QTH & Check Valid ( availble as checkcall script)
 qth=$(curl -s "https://api.hamdb.org/v1/$1/csv/$1")
 IFS=',' read -r callsign licenseclass licenseexpiry grid lat lon status forename initial surname suffix street town state zipcode country <<< "$qth"
 
@@ -34,52 +54,15 @@ fullname="$forename $initial $surname"; fullname=$(echo "$fullname" | xargs)
 address="$street, $town, $state $zipcode $country"
 
 # Convert License Class
-case "$licenseclass" in
- "T")
-  licenseclass="Technician"
-  ;;
- "G")
-  licenseclass="General"
-  ;; 
- "E")
-  licenseclass="Extra"
-  ;;
- *)
-  licenseclass="Station Callsign"
-  ;;
-esac
+case "$licenseclass" in "T") licenseclass="Technician" ;; "G") licenseclass="General" ;; "E") licenseclass="Extra" ;; "N") licesnseclass="Novice" ;; "A") licenseclass "Advanced" ;; *) licenseclass="Station Callsign" ;; esac
 
 # Convert License Status
-case "$status" in
- "A")
-  status="Active"
-  ;;
- "E")
-  status="Expired"
-  ;;
- "P")
-  status="Pending"
-  ;;
- *)
-  status="Unknown"
-  ;;
-esac
+case "$status" in "A") status="Active" ;; "E") status="Expired" ;; "P") status="Pending" ;; *) status="Unknown" ;; esac
 
-# Script Directories
-HomePath="/home/$USER"
-DigiHubHome="$HomePath/DigiHub"
-ScriptPath="$DigiHubHome/scripts"
-venv_dir="$DigiHubHome/.digihub-venv"
-PythonPath="$DigiHubHome/.pyscripts"
-
+# Check for correct installation information
 printf '\nInstalling DigiHub in %s, with current information held by the FCC (can be edited later):\n\n' "$DigiHubHome"
 printf 'Callsign\t%s\nLicense:\t%s expires %s (%s)\nName:\t\t%s\nAddress:\t%s\nCoordinates:\tGrid: %s Latitude: %s Longitude %s\n\n' "$callsign" "$licenseclass" "$licenseexpiry" "$status" "$fullname" "$address" "$grid" "$lat" "$lon"
-printf 'Warning'
-
-# Move Folders into place
-
-
-# Check Correct Install Information
+YnContinue
 
 # Need to think about this, changing one will change all!
 
@@ -87,7 +70,11 @@ printf 'Warning'
 # $latitude
 # $longitude
 
-printf 'This may take some time ...\n\n' 
+# Overwrite existing Installation Warning
+printf '%b' "${RED}" 'Warning! ' "${NC}" 'continuing will overwrite an existing installation of DigiHub\n'
+YnContinue
+
+printf '\nThis may take some time ...\n\n' 
 
 exit 0
 
