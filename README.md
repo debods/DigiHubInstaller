@@ -9,9 +9,9 @@ found here: https://digipi.org
 DigiHub, builds on the DigiPi platform and allows installation on any pre-installed, 
 Linux distribution, the primary benefit being flexible configurability.  The installation
 script has been built and tested on Debian based (bookworm and trixie) Linux distributions
-meaning it can still be installed on Raspberry Pi OS (on a Pi Zero 2W, Pi 3, 4 or, 5)
+meaning it can still be installed on Raspberry Pi OS (running on a Pi Zero 2W, Pi 3, 4 or, 5)
 
-All software is open-source licensed and is freely available
+All software is open-source licensed and is freely available.
 
 
 
