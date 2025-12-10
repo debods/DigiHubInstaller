@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-import math
+import math, argparse
 
-def latlon_to_grid(latitude, longitude):
+def grid_conversion(latitude, longitude):
  field_lon = int((longitude + 180) / 20)
  field_lat = int((latitude + 90) / 10)
  grid = chr(ord('A') + field_lon) + chr(ord('A') + field_lat)
@@ -17,12 +17,14 @@ def latlon_to_grid(latitude, longitude):
 
  return grid
 
-latitude = 37.6872  # Example latitude
-longitude = -97.3301 # Example longitude
+parser = argparse.ArgumentParser(description="Calculate Maidenhead Grid from Latitude and Longitude.")
+parser.add_argument('latitude', type=float, help="Latitude (e.g., 41.714649)")
+parser.add_argument('longitude', type=float, help="Longitude (e.g., -72.728485)")
+args = parser.parse_args()
 
-grid_square = latlon_to_grid(latitude, longitude)
-prefix = grid_square[:-2]
-suffix = grid_square[-2:].lower()
-grid_square = prefix+suffix
+maidenhead = grid_conversion(args.latitude, args.longitude)
+prefix = maidenhead[:-2]
+suffix = maidenhead[-2:].lower()
+maidenhead = prefix+suffix
 
-print(f"{grid_square}")
+print(f"{maidenhead}")
