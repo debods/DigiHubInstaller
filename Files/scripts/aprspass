@@ -9,6 +9,12 @@
 # Steve de Bode - KQ4ZCI - December 2025
 #
 
-# Activate venv
+# Check Parameters
+if [ "$#" -ne "1" ]; then
+  printf '\nIncorrect syntax\n\n %s <callsign>\n\n' "${0##*/}" >&2
+  exit 1
+fi
 
-# Deactivate venv
+aprspass=$(python3 aprspass.py "$1" )
+
+printf  '\nThe APRS password for callsign %s is: %s\n\n' "$1" "$aprspass"
