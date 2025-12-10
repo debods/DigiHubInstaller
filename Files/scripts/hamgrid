@@ -15,6 +15,6 @@ if [ "$#" -ne "2" ]; then
   exit 1
 fi
 
-hamgrid=$(python3 hamgrid.py "$1" "$2" )
+hamgrid=$(python3 hamgrid.py "$1" "$2")
 
 printf  '\nThe Maidenhead Grid Square for Latitude %s, Longitude %s is: %s\n\n' "$1" "$2" "$aprspass"
