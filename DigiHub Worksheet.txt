@@ -31,22 +31,25 @@ Longitude				Working in install script & checkcall created
 GPS Device
 AX.25 Node Password		Random AlphaNumeric set as axnodepass
 
-# Shell Script Creation
-reboot		  done
-shutdown	  done
-update		  done
-checkcall	  done
-sysinfo		  done
-editconfig	- allow changes to callsign, lat, lon and possibly grid (if possible to calculate approx lat lon from it or from GPS)
-uninstall	-remove info in .profile, remove DigiHub Installation direcory (sudo)	
-aprspass 	in progress - python created (needs testing) wrapper needs creating
-hamgrid		in progress - python created (needs testing) wrapper needs creating			
+# Shell Scripts
+reboot		  	done
+shutdown	  	done
+update		  	done
+checkcall	  	done
+sysinfo			done
+editconfig		- allow changes to callsign, lat, lon and possibly grid (if possible to calculate approx lat lon from it or from GPS)
+uninstall		-remove info in .profile, remove DigiHub Installation direcory (sudo)	
+aprspass 		done
+hamgrid			done
+
+# Python Scripts
+aprspass.py		done
+hamgrid.py		done
 
 # Functionality
-Check Internet			done
+Check Internet	done
 Web interface
 Web Shell
-activate venv on boot
 
 # WWW Page Creation
 HTML Files and other static content	644
@@ -54,4 +57,9 @@ Directories containing web content	755
 chown -R $USER:www-data /var/www/html
 
 # HAM Apps
+Direwolf		https://github.com/wb2osz/direwolf
+
+sudo apt-get install git
+sudo apt-get -y install gcc g++ make cmake libasound2-dev libudev-dev libavahi-client-dev # to use the GPIO pins for PTT: libgpiod-dev
+
 

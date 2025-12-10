@@ -1,5 +1,14 @@
 #!/usr/bin/env python
 
+#
+# hamgrid.py
+# Convert latitude and longitude into Maidenhead Grid
+#
+# Version 1.0a
+#
+# Steve de Bode - KQ4ZCI - December 2025
+#
+
 import math, argparse
 
 def grid_conversion(latitude, longitude):
