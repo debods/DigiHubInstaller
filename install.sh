@@ -69,7 +69,7 @@ printf '\nInstalling DigiHub in %s, with current information held by the FCC (ca
 printf 'Callsign\t%s\nLicense:\t%s expires %s (%s)\nName:\t\t%s\nAddress:\t%s\nCoordinates:\tGrid: %s Latitude: %s Longitude %s\n\n' "$callsign" "$licenseclass" "$licenseexpiry" "$status" "$fullname" "$address" "$grid" "$lat" "$lon"
 
 # Generate APRS password
-aprspass=$(python3 aprspass.py "$callsign" )
+aprspass=$(python3 aprspass.py "$callsign")
 
 # Options for Change 
 # Need to think about this, changing one will change all!
