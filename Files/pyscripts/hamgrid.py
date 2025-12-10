@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import math, sys
+import math
 
 def latlon_to_grid(latitude, longitude):
  field_lon = int((longitude + 180) / 20)
@@ -21,4 +21,8 @@ latitude = 37.6872  # Example latitude
 longitude = -97.3301 # Example longitude
 
 grid_square = latlon_to_grid(latitude, longitude)
+prefix = grid_square[:-2]
+suffix = grid_square[-2:].lower()
+grid_square = prefix+suffix
+
 print(f"{grid_square}")
