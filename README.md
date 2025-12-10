@@ -9,8 +9,7 @@ DigiHub, builds on the DigiPi concept and is designed to allow installation on a
 
 The primary benefit of DigiHub is it's flexibily and configurability. 
 
-The installation script has been built and tested on Debian based (bookworm and trixie) Linux distributions
-meaning it can still be installed on Raspberry Pi OS (Pi Zero 2W, 3, 4 or, 5 are recommended).
+The installation script has been built and tested on Debian bookworm and trixie meaning it can be installed on Raspberry Pi OS (Pi Zero 2W, 3, 4 or, 5 are recommended).
 
 All software is open-source licensed and is freely available.
 
