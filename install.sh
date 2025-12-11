@@ -95,7 +95,7 @@ chmod +x $ScriptPath/* $PythonPath/*
 aprspass=$(python3 $PythonPath/aprspass.py "$callsign")
 
 # Set Environment & PATH
-for i in "# DigiHub Installation" "export DigiHub=$DigiHubHome" "export DigiHubPy=$PythonPath" "export VirtualEnv=$venv_dir" "export Callsign=$callsign" "export APRSPass=$aprspass" "export Lat=$lat" "export Lon=$lon" "export Grid=$grid" "PATH=$ScriptPath:$PythonPath:\$PATH" "clear; sysinfo"; do
+for i in "# DigiHub Installation" "export DigiHub=$DigiHubHome" "export DigiHubPy=$PythonPath" "export venv_dir=$venv_dir" "export Callsign=$callsign" "export APRSPass=$aprspass" "export Lat=$lat" "export Lon=$lon" "export Grid=$grid" "PATH=$ScriptPath:$PythonPath:\$PATH" "clear; sysinfo"; do
 if ! grep -qF "$i" "$HomePath/.profile"; then
  printf '\n%s' "$i" >> "$HomePath/.profile"
 fi
