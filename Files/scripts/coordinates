@@ -9,7 +9,9 @@
 # Steve de Bode - KQ4ZCI - December 2025
 #
 
+source "$venv_dir/bin/activate"
 coordinates=$(python3 $DigiHubPy/coordinates.py)
 IFS=',' read -r lat lon <<< "$coordinates"
+deactivate
 
 printf  '\n Current Location: Latitude: %s Longitude: %s' "$lat" "$lon"
