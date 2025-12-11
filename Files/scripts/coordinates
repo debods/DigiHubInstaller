@@ -1,0 +1,15 @@
+#1/bin bash
+
+#
+# coordinates
+# python script wrapper for coordinates.py
+#
+# Version 1.0a
+#
+# Steve de Bode - KQ4ZCI - December 2025
+#
+
+coordinates=$(python3 $DigiHubPy/coordinates.py)
+IFS=',' read -r lat lon <<< "$coordinates"
+
+printf  '\n Current Location: Latitude: %s Longitude: %s' "$lat" "$lon"
