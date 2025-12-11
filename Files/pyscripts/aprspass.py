@@ -27,6 +27,7 @@ def main():
     parser.add_argument("callsign", help="Your amateur radio callsign (e.g., 9M2PJU, 9M2PJU-5)")
     args = parser.parse_args()
 
+    passcode = aprs_passcode(args.callsign)
     print(f"{passcode}")
 
 if __name__ == "__main__":
