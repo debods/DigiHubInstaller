@@ -79,8 +79,7 @@ fi
 printf 'Complete\n\n'
 
 # Copy files/directories into place & set permissions
-cp -R $InstallPath/Files/scripts $DigiHubHome
-cp -R $InstallPath/Files/pyscripts $DigiHubHome
+cp -R $InstallPath/Files/* $DigiHubHome
 # html files
 chmod +x $ScriptPath/* $PythonPath/*
 
