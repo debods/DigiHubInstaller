@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 #
-# coordinates.py
+# gpsposition.py
 # Get curent position fro GPS
 #
 # Version 1.0a
