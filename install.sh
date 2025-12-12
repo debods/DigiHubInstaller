@@ -38,8 +38,7 @@ PythonPath="$DigiHubHome/pyscripts"
 InstallPath=$(pwd)
 
 # Check for Internet Connectivity
-ping -c 1 -W 1 1.1.1.1 >/dev/null 2>&1
-if [ $? -ne 0 ]; then
+if ! ping -c 1 -W 1 1.1.1.1 >/dev/null 2>&1; then
  printf '\nNo internet connectivity detected, which a requirement for installation - Aborting.\n\n'
  exit 1
 fi
