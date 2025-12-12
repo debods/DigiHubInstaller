@@ -124,11 +124,6 @@ sudo apt -y install lastlog2 >/dev/null 2>&1
 
 # Web Server
 
-# Install exceptions for bookworm
-if [[ "$(cat /etc/os-release | grep PRETTY)" != *"bookworm"* ]]; then
- 
-fi
-
 # Reboot
 while true; do
   printf '\nReboot Now (Y/n) '; read -n1 -r response
