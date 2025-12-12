@@ -99,11 +99,15 @@ if [[ "$gpsstatus" == "nodata" || "$gpsstatus" == "nofix" ]]; then printf '\nUsi
 # need to cleanup if Nn response - run uninstaller?
 if [[ "$gpsport" == "nogps" ]]; then printf 'Not found!'; fi
 
+echo "Varaible Dump GPS Status $gpsstatus"
+
 # Option to use current location from GPS (available as changelocale script)
 if [[ "$gpsstatus" == "working" ]]; then
  gpsposition=$("$PythonPath"/gpsposition.py)
  IFS=',' read -r gpslat gpslon <<< "$gpsposition"
-echo "variable dump $gpslat $gpslon"
+
+echo "Varaible Dump GPS Lat $gpslat Lon $gpslon"
+
  hamgrid=$("$PythonPath"/hamgrid.py $gpslat $gpslon)
 
  printf '\nGPS device found and working - Current Latitude: %s Longitude: %s Grid: %s\n' "$gpslat" "$gpslon" "$hamgrid"
