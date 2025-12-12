@@ -7,6 +7,8 @@ Calculate APRS Password from ham callsign
 Version 1.0a
 
 Steve de Bode - KQ4ZCI - December 2025
+
+Output: APRS password
 """
 
 def aprs_passcode(callsign: str) -> int:
