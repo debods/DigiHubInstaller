@@ -94,11 +94,7 @@ if [[ "$gpsport" == *"dev"* ]]; then
  if [[ $gpsstatus" == "nodata" ]]; then printf '\nGPS device found but no data is being received. '; fi
  if [[ $gpsstatus" == "nofix" ]]; then printf '\nGPS device found but does not have a satellite fix. '; fi
 fi
-
-if [[ "$gpsstatus" == "nodata" || $gpsstatus" == "nofix" ]]; then
- printf 'Using information from your home QTH - Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"
- YnContinue
-fi
+if [[ "$gpsstatus" == "nodata" || ""$gpsstatus" == "nofix" ]]; then printf 'Using information from your home QTH - Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"; YnContinue; fi
 
 # Option to use current location from GPS (available as changelocale script)
 if [[ $gpsstatus" == "working" ]]; then
@@ -111,6 +107,7 @@ if [[ $gpsstatus" == "working" ]]; then
   case $response in
     C|c) lat=gpslat; lon=gpslon; grid=hamgrid ;; Q|q) break ;; *) printf '\nInvalid response, please select Y/n' ;; esac
  done
+fi
 
 # Generate aprspass and axnodepass
 aprspass=$($PythonPath/aprspass.py "$callsign")
