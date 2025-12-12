@@ -92,17 +92,20 @@ gps=$("$PythonPath"/gpstest.py)
 IFS=',' read -r gpsport gpsstatus <<< "$gps"
 
 if [[ "$gpsport" == *"dev"* ]]; then
- if [[ "$gpsstatus" == "nodata" ]]; then printf '\nGPS device found but no data is being received. '; fi
- if [[ "$gpsstatus" == "nofix" ]]; then printf '\nGPS device found but does not have a satellite fix. '; fi
+ if [[ "$gpsstatus" == "nodata" ]]; then printf 'GPS device found but no data is being received. '; fi
+ if [[ "$gpsstatus" == "nofix" ]]; then printf 'GPS device found but does not have a satellite fix. '; fi
 fi
-if [[ "$gpsstatus" == "nodata" || "$gpsstatus" == "nofix" ]]; then printf 'Using information from your home QTH - Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"; YnContinue; fi
+if [[ "$gpsstatus" == "nodata" || "$gpsstatus" == "nofix" ]]; then printf '\nUsing information from your home QTH - Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"; YnContinue; fi
+# need to cleanup if Nn response - run uninstaller?
 if [[ "$gpsport" == "nogps" ]]; then printf 'Not found!'; fi
 
 # Option to use current location from GPS (available as changelocale script)
 if [[ "$gpsstatus" == "working" ]]; then
  gpsposition=$("$PythonPath"/gpsposition.py)
  IFS=',' read -r gpslat gpslon <<< "$gpsposition"
- hamgrid=$("$PythonPath"/hamgrid.py "$gpslat" "$gpslon")
+echo "variable dump $gpslat $gpslon"
+ hamgrid=$("$PythonPath"/hamgrid.py $gpslat $gpslon)
+
  printf '\nGPS device found and working - Current Latitude: %s Longitude: %s Grid: %s\n' "$gpslat" "$gpslon" "$hamgrid"
  while true; do
   printf '\nWould you like to use your current location or home QTH for the installation (C/q)? '; read -n1 -r response
