@@ -105,7 +105,7 @@ if [[ "$gpsstatus" == "working" ]]; then
  export DigiHubGPSport="$gpsport"; source "$venv_dir/bin/activate"
  gpsposition=$("$PythonPath"/gpsposition.py)
  IFS=',' read -r gpslat gpslon <<< "$gpsposition"
- hamgrid=$("$PythonPath"/hamgrid.py $gpslat $gpslon)
+ hamgrid=$("$PythonPath"/hamgrid.py "$gpslat" "$gpslon")
  printf 'found and working\nCurrent coordinates\tLatitude: %s Longitude: %s Grid: %s\nFCC coordinates:\tLatitude: %s Longitude: %s Grid: %s\n' "$gpslat" "$gpslon" "$hamgrid" "$lat" "$lon" "$grid"
  while true; do
   printf '\nWould you like to use your current location or home QTH from the FCC for the installation (C/q)? '; read -n1 -r response
