@@ -42,5 +42,5 @@ sudo rm -rf "$DigiHub"
 while true; do
   printf '\nReboot Now (Y/n) '; read -n1 -r response
   case $response in
-    Y|y)  printf '\n' sudo reboot ;; N|n) printf '\nA reboot is required to completley remove DigiHub\n\n'; break ;; *) printf '\nInvalid response, please select Y/n' ;; esac
+    Y|y) sudo reboot; printf '\nRebooting' ;; N|n) printf '\nA reboot is required to completely remove DigiHub\n\n'; break ;; *) printf '\nInvalid response, please select Y/n' ;; esac
 done

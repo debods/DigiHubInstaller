@@ -20,7 +20,7 @@ fi
 function YnContinue {
  while true; do
   printf 'Continue (Y/n)? '; read -n1 -r response
-  case $response in Y|y) printf '\n\n'; break ;; N|n) printf '\nInstallation aborted.\n'; deactivate >/dev/null 2>&1; exit 0 ;; *) printf '\nInvalid response, please select (Y/n)\n' ;; esac
+  case $response in Y|y) printf '\n\n'; break ;; N|n) printf '\nInstallation aborted.\n'; deactivate >/dev/null 2>&1; exit 0 ;; *) printf '\nInvalid response, please select y (or Y) for yes or n (or N)) for no\n' ;; esac
  done
 }
 
@@ -110,7 +110,7 @@ if [[ "$gpsstatus" == "working" ]]; then
  while true; do
   printf '\nWould you like to use your current location or home QTH from the FCC for the installation (C/f)? '; read -n1 -r response
   case $response in
-    C|c) lat=$gpslat; lon=$gpslon; grid=$hamgrid; break ;; F|f) break ;; *) printf '\nInvalid response, please select c (or C) for Current location or f (or F) for FCC location' ;; esac
+    C|c) printf '\n'; lat=$gpslat; lon=$gpslon; grid=$hamgrid; break ;; F|f) break ;; *) printf '\nInvalid response, please select c (or C) for Current location or f (or F) for FCC location' ;; esac
  done
 fi
 
@@ -137,5 +137,5 @@ sudo apt -y install lastlog2 >/dev/null 2>&1
 # Reboot
 while true; do
   printf '\nReboot Now (Y/n) '; read -n1 -r response; case $response in
-    Y|y) printf '\n'; deactivate; sudo reboot ;; N|n) deactivate; printf '\nPlease reboot before attempting to access DigiHub features\n\n'; break ;; *) printf '\nInvalid response, please select Y/n' ;; esac
+    Y|y) deactivate; sudo reboot; printf '\nRebooting'; break ;; N|n) deactivate; printf '\nPlease reboot before attempting to access DigiHub features\n\n'; break ;; *) printf '\nInvalid response, please select Y/n' ;; esac
 done
