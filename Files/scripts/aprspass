@@ -17,4 +17,4 @@ fi
 
 aprspass=$($DigiHubPy/aprspass.py "$1")
 
-printf  '\nThe APRS password for callsign %s is: %s\n\n' "$1" "$aprspass"
+printf  '\nThe APRS password for callsign %s is: %s\n\n' "${1^^}" "$aprspass"
