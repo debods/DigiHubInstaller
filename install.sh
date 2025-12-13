@@ -109,7 +109,7 @@ if [[ "$gpsstatus" == "working" ]]; then
  while true; do
   printf '\nWould you like to use your current location or home QTH from the FCC for the installation (C/f)? '; read -n1 -r response
   case $response in
-    C|c) lat=$gpslat; lon=$gpslon; grid=$hamgrid; break ;; Q|q) break ;; *) printf '\nInvalid response, please select c (or C) for Current location or f (or F) for FCC location' ;; esac
+    C|c) lat=$gpslat; lon=$gpslon; grid=$hamgrid; break ;; F|f) break ;; *) printf '\nInvalid response, please select c (or C) for Current location or f (or F) for FCC location' ;; esac
  done
 fi
 

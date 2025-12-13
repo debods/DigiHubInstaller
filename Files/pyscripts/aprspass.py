@@ -12,26 +12,31 @@ Input:	callsign
 Output: (APRS password)
 """
 
+import sys
+
 def aprs_passcode(callsign: str) -> int:
- callsign = callsign.upper().split('-')[0]  # Remove SSID if present
- hash = 0x73E2
+    # APRS-IS passcode is based on the callsign only (SSID ignored)
+    base = callsign.split("-", 1)[0].strip().upper()
 
- for i, char in enumerate(callsign):
-  if i % 2 == 0:
-   hash ^= ord(char) << 8
-  else:
-   hash ^= ord(char)
-  return hash & 0x7FFF  # 15-bit mask
+    h = 0x73E2
+    for i, ch in enumerate(base):
+        if i & 1:
+            h ^= ord(ch)
+        else:
+            h ^= ord(ch) << 8
 
-def main():
- import argparse
+    return h & 0x7FFF
 
- parser = argparse.ArgumentParser(description="Generate APRS-IS passcode for a callsign.")
- parser.add_argument("callsign", help="Your amateur radio callsign (e.g., KQ4ZCI, KQ4ZCI-2)")
- args = parser.parse_args()
+def main() -> int:
+    if len(sys.argv) != 2:
+        return 2
 
- passcode = aprs_passcode(args.callsign)
- print(f"{passcode}")
+    cs = sys.argv[1]
+    if not cs.strip():
+        return 2
+
+    print(aprs_passcode(cs))
+    return 0
 
 if __name__ == "__main__":
- main()
+    raise SystemExit(main())
