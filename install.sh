@@ -20,7 +20,7 @@ fi
 function YnContinue {
  while true; do
   printf 'Proceed (Y/n)? '; read -n1 -r response
-  case $response in Y|y) printf '\n'; break ;; N|n) printf '\nInstallation aborted.\n'; exit 0 ;; *) printf '\nInvalid response, please select (Y/n)\n' ;; esac
+  case $response in Y|y) printf '\n'; break ;; N|n) printf '\nInstallation aborted.\n'; deactivate; exit 0 ;; *) printf '\nInvalid response, please select (Y/n)\n' ;; esac
  done
 }
 
@@ -69,7 +69,7 @@ printf 'Updating Operating System ... '
 source "$ScriptPath"/update >/dev/null 2>&1
 printf 'Complete\n\n'
 
-# Setup and activate Python venv
+# Setup and activate Python
 printf 'Configuring Python ... '
 if [ ! -d "$venv_dir" ]; then
  python3 -m venv "$venv_dir" >/dev/null 2>&1
@@ -77,7 +77,7 @@ if [ ! -d "$venv_dir" ]; then
  # Install Python Packages
   sudo apt -y install python3-pip >/dev/null 2>&1
   printf 'Installing required Python packages ... '
-  sudo "$venv_dir"/bin/pip3 install pyserial >/dev/null 2>&1
+  sudo "$venv_dir"/bin/pip3 install pynmea2 pyserial >/dev/null 2>&1
 fi
 printf 'Complete\n\n'
 
@@ -97,11 +97,9 @@ if [[ "$gpsport" == *"dev"* ]]; then
 fi
 if [[ "$gpsstatus" == "nodata" || "$gpsstatus" == "nofix" ]]; then printf '\nUsing information from your home QTH - Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"; YnContinue; fi
 # need to cleanup if Nn response - run uninstaller?
-if [[ "$gpsport" == "nogps" ]]; then printf 'Not found!'; fi
+if [[ "$gpsport" == "nogps" ]]; then printf 'Not found!\n'; fi
 
-echo "Varaible Dump GPS Status $gpsstatus"
-
-# Option to use current location from GPS (available as changelocale script)
+# Option to use current location from GPS (available in editconfig script)
 if [[ "$gpsstatus" == "working" ]]; then
  gpsposition=$("$PythonPath"/gpsposition.py)
  IFS=',' read -r gpslat gpslon <<< "$gpsposition"
@@ -114,7 +112,7 @@ echo "Varaible Dump GPS Lat $gpslat Lon $gpslon"
  while true; do
   printf '\nWould you like to use your current location or home QTH for the installation (C/q)? '; read -n1 -r response
   case $response in
-    C|c) lat=gpslat; lon=gpslon; grid=hamgrid; breakn ;; Q|q) break ;; *) printf '\nInvalid response, please select Y/n' ;; esac
+    C|c) lat=gpslat; lon=gpslon; grid=hamgrid; break ;; Q|q) break ;; *) printf '\nInvalid response, please select Y/n' ;; esac
  done
 fi
 

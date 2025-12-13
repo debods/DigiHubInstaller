@@ -8,6 +8,7 @@ Version 1.0a
 
 Steve de Bode - KQ4ZCI - December 2025
 
+Input:	None (GPS Device)
 Output: GPS port,GPS status
 
 Exit codes:
@@ -31,10 +32,7 @@ from typing import Optional, Tuple
 import serial
 from serial.tools import list_ports
 
-
-# Strict NMEA shape: $BODY*HH
 NMEA_RE = re.compile(r"^\$(?P<body>[^*]+)\*(?P<ck>[0-9A-Fa-f]{2})\s*$")
-
 
 def nmea_checksum_ok(sentence: str) -> bool:
     m = NMEA_RE.match(sentence.strip())
@@ -46,7 +44,6 @@ def nmea_checksum_ok(sentence: str) -> bool:
     for ch in body:
         calc ^= ord(ch)
     return calc == given
-
 
 def parse_fix(sentence: str) -> Optional[bool]:
     """
@@ -85,7 +82,6 @@ def parse_fix(sentence: str) -> Optional[bool]:
 
     return None
 
-
 def linux_ports() -> list[str]:
     """
     Linux-only realistic GPS-USB candidates.
@@ -111,12 +107,10 @@ def linux_ports() -> list[str]:
             out.append(dev)
     return out
 
-
 @dataclass
 class Result:
     port: str = ""
     status: str = "nogps"  # working|nofix|nodata|nogps
-
 
 def sniff(port: str, baud: int, listen: float) -> Tuple[Result, bool]:
     """
@@ -158,13 +152,11 @@ def sniff(port: str, baud: int, listen: float) -> Tuple[Result, bool]:
 
     return Result(port, "nofix"), True
 
-
 def emit(r: Result) -> None:
     if r.status == "nogps":
         print("nogps,nogps")
     else:
         print(f"{r.port},{r.status}")
-
 
 def score(r: Result) -> int:
     """
@@ -172,7 +164,6 @@ def score(r: Result) -> int:
     Priority: working > nofix > nodata > nogps
     """
     return {"working": 3, "nofix": 2, "nodata": 1, "nogps": 0}.get(r.status, 0)
-
 
 def main() -> int:
     if not sys.platform.startswith("linux"):
@@ -212,7 +203,6 @@ def main() -> int:
 
     emit(best)
     return {"working": 0, "nofix": 1, "nodata": 2, "nogps": 3}.get(best.status, 3)
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

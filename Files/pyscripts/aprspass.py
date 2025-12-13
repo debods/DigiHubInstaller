@@ -8,6 +8,7 @@ Version 1.0a
 
 Steve de Bode - KQ4ZCI - December 2025
 
+Input:	callsign
 Output: (APRS password)
 """
 
