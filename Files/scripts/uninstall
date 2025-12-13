@@ -1,3 +1,4 @@
+  GNU nano 8.4                                                                                                 uninstall                                                                                                           
 #!/bin/bash
 
 #
@@ -11,22 +12,27 @@
 
 # Uninstallation warning
 while true; do
-  printf 'This action will completely remove DigiHub, continue (Y/n)? '; read -n1 -r response
+  printf '\nThis action will completely remove DigiHub, continue (Y/n)? '; read -n1 -r response
   case $response in Y|y) printf '\nRemoving DigiHub'; break ;; N|n) printf '\nUninstall aborted.\n'; exit 0 ;; *) printf '\nInvalid response, please select (Y/n)\n' ;; esac
  done
 
 HomePath="/home/$USER"
 deactivate >/dev/null 2>&1
+cd "$HomePath"
 
-# # Cleanup .profile
-for i in "DigiHub"  "sysinfo"; do
- if grep -qF "$i" "$HomePath/.profile"; then
-  sed -i "/$i/d" "$HomePath/.profile"
- fi
-done
-perl -i.dh -0777 -pe 's{\s+\z}{}m' ~/.profile >/dev/null 2>&1
-printf '\n' >> "$HomePath/.profile"
-rm ~/.profile.dh
+# Cleanup .profile
+if [ -f "$HomePath"/.profile.dh ]; then
+ cp "$HomePath"/.profile.dh "$HomePath"/.profile
+else
+ for i in "DigiHub"  "sysinfo"; do
+  if grep -qF "$i" "$HomePath"/.profile; then
+   sed -i "/$i/d" "$HomePath"/.profile
+  fi
+ done
+ perl -i.bak -0777 -pe 's{\s+\z}{}m' ~/.profile >/dev/null 2>&1
+ printf '\n' >> "$HomePath"/.profile
+ rm "$HomePath"/.profile.bak
+fi
 
 # Remove Directories
 sudo rm -rf "$DigiHub"
@@ -37,6 +43,6 @@ sudo rm -rf "$DigiHub"
 while true; do
   printf '\nReboot Now (Y/n) '; read -n1 -r response
   case $response in
-    Y|y) sudo reboot; break ;; N|n) printf '\nA reboot is required to completly remove DigiHub\n\n'; break ;; *) printf '\nInvalid response, please select Y/n' ;; esac
+    Y|y)  printf '\n' sudo reboot; break ;; N|n) printf '\nA reboot is required to completley remove DigiHub\n\n'; break ;; *) printf '\nInvalid response, please select Y/n' ;; esac
 done
 

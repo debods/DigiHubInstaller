@@ -10,8 +10,10 @@
 #
 
 source "$DigiHubvenv/bin/activate"
-coordinates=$(python3 $DigiHubPy/coordinates.py)
-IFS=',' read -r lat lon <<< "$coordinates"
+gpsposition=$($DigiHubPy/gpsposition.py)
+IFS=',' read -r lat lon <<< "$gpsposition"
+hamgrid=$($DigiHubPy/hamgrid.py "$lat" "$lon")
+IFS=',' read -r grid <<< "$hamgrid"
 deactivate
 
-printf  '\n Current Location: Latitude: %s Longitude: %s\n\n' "$lat" "$lon"
+printf  '\nCurrent Location: Latitude: %s Longitude: %s Grid: %s\n\n' "$lat" "$lon" "$grid"

@@ -20,7 +20,7 @@ fi
 function YnContinue {
  while true; do
   printf 'Continue (Y/n)? '; read -n1 -r response
-  case $response in Y|y) printf '\n'; break ;; N|n) printf '\nInstallation aborted.\n'; deactivate; exit 0 ;; *) printf '\nInvalid response, please select (Y/n)\n' ;; esac
+  case $response in Y|y) printf '\n'; break ;; N|n) printf '\nInstallation aborted.\n'; deactivate >/dev/null 2>&1; exit 0 ;; *) printf '\nInvalid response, please select (Y/n)\n' ;; esac
  done
 }
 
@@ -47,12 +47,13 @@ qth=$(curl -s "https://api.hamdb.org/v1/$1/csv/$1")
 IFS=',' read -r callsign licenseclass licenseexpiry grid lat lon status forename initial surname suffix street town state zip country <<< "$qth"
 
 if [ "$callsign" != "${1^^}" ]; then
- printf '\nThe Callsign \"%s\" is either invalid or not found, please check and try again.\n\n' "$1"
+ printf '%b' '\nThe Callsign "' "$colb" "${1^^}" "$ncol" '" is either invalid or not found, please check and try again.\n\n'
  exit 1
 fi
 
 # Check for correct Callsign
-
+printf '%b' '\nThis will install DigiHub for the Callsign "' "$colb" "${1^^}" "$ncol" '"\n\n'
+YnContinue
 
 # Check for exising installation and warn
 if grep -qF "DigiHub" "$HomePath/.profile"; then
@@ -61,7 +62,7 @@ if grep -qF "DigiHub" "$HomePath/.profile"; then
  # run uninstaller
 fi
 
-printf '\nThis may take some time ...\n\n' 
+printf 'This may take some time ...\n\n' 
 
 # Update OS
 printf 'Updating Operating System ... '
@@ -118,7 +119,9 @@ aprspass=$("$PythonPath"/aprspass.py "$callsign")
 axnodepass=$(openssl rand -base64 12 | tr -dc A-Za-z0-9 | head -c6)
 
 # Set Environment & PATH
-cp "$HomePath"/.profile "$HomePath"/.profile.orig
+ # Clean existing and backup .profile
+ perl -i.dh -0777 -pe 's{\s+\z}{}m' $HomePath/.profile >/dev/null 2>&1
+ printf '\n' >> "$HomePath"/.profile
 for i in "# DigiHub Installation" "export DigiHub=$DigiHubHome" "export DigiHubPy=$PythonPath" "export DigiHubGPSport=$gpsport" "export DigiHubvenv=$venv_dir" "export DigiHubcall=$callsign" "export DigiHubaprs=$aprspass" "export DigiHubaxnode=$axnodepass" "export DigiHubLat=$lat" "export DigiHubLon=$lon" "export DigiHubgrid=$grid" "PATH=$ScriptPath:$PythonPath:\$PATH" "clear; sysinfo"; do
 if ! grep -qF "$i" "$HomePath"/.profile; then
  printf '\n%s' "$i" >> "$HomePath"/.profile
