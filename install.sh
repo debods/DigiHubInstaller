@@ -72,7 +72,6 @@ printf 'Complete\n\n'
 # Setup and activate Python
 printf 'Configuring Python ... '
 if [ ! -d "$venv_dir" ]; then
- export 
  python3 -m venv "$venv_dir" >/dev/null 2>&1
  source "$venv_dir/bin/activate"
  # Install Python Packages
