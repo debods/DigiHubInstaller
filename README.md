@@ -33,10 +33,23 @@ DigiPi    https://digipi.org
 Direwolf  https://github.com/wb2osz/direwolf
 hamdb     https://hamdb.org
 
-Installation instructions
+Installation instructions:
+
+Ensure the Operating System you are installing on has an active Internet connection, then issue the following commands:
+
+If necessary, as it may already be installed:
 
 sudo apt install git
+
+Clone the repository:
+
 git clone <DigiHub repository>
+
+Change directory to the install folder and make the installer executable:
+
 cd <Install Folder>
-chmod +x install.sh <callsign> e.g. ./install.sh kq4zciy
-./install.sh
+chmod +x install.sh
+
+Run the installer
+
+./install.sh <callsign> (e.g. ./install.sh kq4zci)

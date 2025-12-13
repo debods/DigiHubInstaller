@@ -85,11 +85,11 @@ printf 'Complete\n\n'
 # Copy files/directories into place & set permissions
 cp -R "$InstallPath"/Files/* "$DigiHubHome"
 # html files
-chmod +x "$ScriptPath"/* "$PythonPath"/*
+chmod +x "$ScriptPath"/* "$!PythonPath"/*
 
 # Check GPS device Installed
 printf 'Checking for GPS device ... '
-gps=$("$PythonPath"/gpstest.py)
+gps=$(python3 "$InstallPath"/Files/pyscripts/gpstest.py)
 IFS=',' read -r gpsport gpsstatus <<< "$gps"
 
 if [[ "$gpsport" == *"dev"* ]]; then
@@ -103,9 +103,9 @@ if [[ "$gpsport" == "nogps" ]]; then printf 'Not found!\n'; fi
 # Option to use current location from GPS (available in editconfig script)
 if [[ "$gpsstatus" == "working" ]]; then
  export DigiHubGPSport="$gpsport"; source "$venv_dir/bin/activate"
- gpsposition=$("$PythonPath"/gpsposition.py)
+ gpsposition=$(python3 "$InstallPath"/Files/pyscripts/gpsposition.py)
  IFS=',' read -r gpslat gpslon <<< "$gpsposition"
- hamgrid=$("$PythonPath"/hamgrid.py "$gpslat" "$gpslon")
+ hamgrid=$(python3 "$InstallPath"/Files/pyscripts/hamgrid.py "$gpslat" "$gpslon")
  printf 'found and working\nCurrent coordinates\tLatitude: %s Longitude: %s Grid: %s\nFCC coordinates:\tLatitude: %s Longitude: %s Grid: %s\n' "$gpslat" "$gpslon" "$hamgrid" "$lat" "$lon" "$grid"
  while true; do
   printf '\nWould you like to use your current location or home QTH from the FCC for the installation (C/f)? '; read -n1 -r response
@@ -115,7 +115,7 @@ if [[ "$gpsstatus" == "working" ]]; then
 fi
 
 # Generate aprspass and axnodepass
-aprspass=$("$PythonPath"/aprspass.py "$callsign")
+aprspass=$(python3 "$InstallPath"/Files/pyscripts/aprspass.py "$callsign")
 axnodepass=$(openssl rand -base64 12 | tr -dc A-Za-z0-9 | head -c6)
 
 # Set Environment & PATH
@@ -137,5 +137,5 @@ sudo apt -y install lastlog2 >/dev/null 2>&1
 # Reboot
 while true; do
   printf '\nReboot Now (Y/n) '; read -n1 -r response; case $response in
-    Y|y) deactivate; sudo reboot; printf '\nRebooting'; break ;; N|n) deactivate; printf '\nPlease reboot before attempting to access DigiHub features\n\n'; break ;; *) printf '\nInvalid response, please select Y/n' ;; esac
+    Y|y) deactivate; sudo reboot; printf '\nRebooting'cd  ;; N|n) deactivate; printf '\nPlease reboot before attempting to access DigiHub features\n\n'; break ;; *) printf '\nInvalid response, please select Y/n' ;; esac
 done
