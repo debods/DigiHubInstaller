@@ -106,10 +106,9 @@ if [[ "$gpsstatus" == "working" ]]; then
  gpsposition=$("$PythonPath"/gpsposition.py)
  IFS=',' read -r gpslat gpslon <<< "$gpsposition"
  hamgrid=$("$PythonPath"/hamgrid.py $gpslat $gpslon)
- printf 'GPS device found and working\tCurrent coordinates\tLatitude: %s Longitude: %s Grid: %s\n' "$gpslat" "$gpslon" "$hamgrid"
- printf 'Home QTH coordinates are\tFCC coordinates:\tLatitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"
+ printf 'found and working\nCurrent coordinates\tLatitude: %s Longitude: %s Grid: %s\nFCC coordinates:\tLatitude: %s Longitude: %s Grid: %s\n' "$gpslat" "$gpslon" "$hamgrid" "$lat" "$lon" "$grid"
  while true; do
-  printf '\nWould you like to use your current location or home QTH for the installation (C/q)? '; read -n1 -r response
+  printf '\nWould you like to use your current location or home QTH from the FCC for the installation (C/q)? '; read -n1 -r response
   case $response in
     C|c) lat=gpslat; lon=gpslon; grid=hamgrid; break ;; Q|q) break ;; *) printf '\nInvalid response, please select Y/n' ;; esac
  done
