@@ -47,12 +47,12 @@ qth=$(curl -s "https://api.hamdb.org/v1/$1/csv/$1")
 IFS=',' read -r callsign licenseclass licenseexpiry grid lat lon status forename initial surname suffix street town state zip country <<< "$qth"
 
 if [ "$callsign" != "${1^^}" ]; then
- printf '%b' '\nThe Callsign "' "$colb" "${1^^}" "$ncol" '" is either invalid or not found, please check and try again.\n\n'
+ printf '%b' '\nThe Callsign "' "$colb" "${1^^}" "$ncol" '" is either invalid or not found, please check and  re-run the installer with the correct callsign.\n\n'
  exit 1
 fi
 
 # Check for correct Callsign
-printf '%b' '\nThis will install DigiHub for callsign "' "$colb" "${1^^}" "$ncol" '"\n\n'
+printf '%b' '\nThis will install DigiHub for callsign "' "$colb" "${1^^}" "$ncol" '"\nIf this is incorrect select n (or N) and re-run the installer with the correct callsign.\n'
 YnContinue
 
 # Check for exising installation and warn
@@ -102,15 +102,15 @@ case "$gpscode" in
    done
   ;;
  1) printf 'found on port %s no satellite fix.\n' "$gpsport" ;;
- 2) printf 'found on port %sno data is being received.\n' "$gpsport" ;;
+ 2) printf 'found on port %s no data is being received.\n' "$gpsport" ;;
  3) printf 'not found!\n' ;;
  *) ;;
 esac
 
 case "$gpscode" in 
  1|2|3|*)
-  printf 'Pleaso note: If there was a GPS device attached and removed from this OS installation, there may be artefacts causing inconssitent results but, no GPS is currently attached.\n'  
-  printf '\nUsing information from your home QTH - Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"
+  printf 'Please note: If the port is reported as nodata, there may be artefacts causing inconssitent results (likely a GPS device was attached and has since been removed) but no GPS appears to be connected.\n'  
+  printf '\nContinue with information from your home QTH - Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"
   YnContinue
   ;;
 esac
