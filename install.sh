@@ -101,14 +101,15 @@ case "$gpscode" in
     C|c) printf '\n'; lat=$gpslat; lon=$gpslon; grid=$hamgrid; break ;; F|f) break ;; *) printf '\nInvalid response, please select c (or C) for Current location or f (or F) for FCC location' ;; esac
    done
   ;;
- 1) printf 'but does not have a satellite fix.\n' ;;
- 2) printf 'but no data is being received.\n' ;;
+ 1) printf 'found on port %s no satellite fix.\n' "$gpsport" ;;
+ 2) printf 'found on port %sno data is being received.\n' "$gpsport" ;;
  3) printf 'not found!\n' ;;
  *) ;;
 esac
 
 case "$gpscode" in 
  1|2|3|*)
+  printf 'Pleaso note: If there was a GPS device attached and removed from this OS installation, there may be artefacts causing inconssitent results but, no GPS is currently attached.\n'  
   printf '\nUsing information from your home QTH - Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"
   YnContinue
   ;;
