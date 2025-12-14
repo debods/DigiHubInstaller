@@ -1,4 +1,4 @@
-Digital Hub for ham radio (DigiHub)
+Digital Hub for ham radio - DigiHub
 ===================================
 Overview
 --------
