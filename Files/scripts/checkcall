@@ -28,7 +28,7 @@ fullname="$forename $initial $surname $suffix"; fullname=$(echo "$fullname" | xa
 address="$street, $town, $state $zip $country"
 
 # Convert License Class
-case "$class" in "T") class="Technician" ;; "G") class="General" ;; "E") class="Extra" ;; "N") class="Novice" ;; "A") class "Advanced" ;; *) class="Station Callsign" ;; esac
+case "$class" in "T") class="Technician" ;; "G") class="General" ;; "E") class="Extra" ;; "N") class="Novice" ;; "A") class="Advanced" ;; *) class="Station Callsign" ;; esac
 
 # Convert License Status
 case "$licstat" in "A") licstat="Active" ;; "E") licstat="Expired" ;; "P") licstat="Pending" ;; *) licstat="Unknown" ;; esac

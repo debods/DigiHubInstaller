@@ -16,7 +16,6 @@ if [ "$#" -ne "1" ]; then
 fi
 
 # Functions
-
 function YnContinue {
  while true; do
   printf 'Continue (Y/n)? '; read -n1 -r response
@@ -42,13 +41,29 @@ if ! ping -c 1 -W 1 1.1.1.1 >/dev/null 2>&1; then
  exit 1
 fi
 
-# Check Valid Callsign (full information available as checkcall script)
-qth=$(curl -s "https://api.hamdb.org/v1/$1/csv/$1")
-IFS=',' read -r callsign licenseclass licenseexpiry grid lat lon status forename initial surname suffix street town state zip country <<< "$qth"
+# Check for non-us install
+if [ "${1^^}" != "NON-US" ]; then
+ # Check Valid Callsign (full US information available as checkcall script)
+ qth=$(curl -s "https://api.hamdb.org/v1/$1/csv/$1")
+ IFS=',' read -r callsign class expiry grid lat lon licstat forename initial surname suffix street town state zip country <<< "$qth"
+ if [ "$callsign" != "${1^^}" ]; then
+  printf '%b' '\nThe Callsign "' "$colb" "${1^^}" "$ncol" '" is either not valid in the US or not found, please check and re-run the installer with the correct callsign (or non-us).\n\n'
+  exit 1
+ fi
+fi
 
-if [ "$callsign" != "${1^^}" ]; then
- printf '%b' '\nThe Callsign "' "$colb" "${1^^}" "$ncol" '" is either invalid or not found, please check and  re-run the installer with the correct callsign.\n\n'
- exit 1
+# non-us callsign entry
+if [ "${1^^}" == "NON-US" ]; then
+ while true; do
+  printf '\n'; read -rp 'Please enter the callsign you wish to use: ' callsign
+  printf '%b' '\nIs '  "$colb" "$callsign" "$ncol" ' correct? '; read -n1 -r response
+  case "$response" in y|Y) break ;; n|N) printf 'Please re-enter the callsign.\n' ;; *) printf 'Invalid response. Enter y or n.\n' ;; esac
+ done
+ # Declare all QTH variables
+ vars=(class expiry grid lat lon licstat forename initial surname suffix street town state zip country)
+ for i in "${vars[@]}"; do
+  printf -v "$i" '%s' "?"
+ done
 fi
 
 # Check for correct Callsign
@@ -57,9 +72,9 @@ YnContinue
 
 # Check for exising installation and warn
 if grep -qF "DigiHub" "$HomePath/.profile"; then
- printf '%b' "${colr}" 'Warning! ' "${ncol}" 'There appears to be an existing installation of DigiHub which will be replaced if you continue.\n'
+ printf '%b' "${colr}" 'Warning! ' "${ncol}" 'There appears to be an existing installation of DigiHub for ' "${colr}" "$DigiHubcall" "${ncol}" ' which will be replaced if you continue.\n'
  YnContinue
- # run uninstaller
+ "$ScriptPath"/uninstall "ni" >/dev/null 2>&1
 fi
 
 printf 'This may take some time ...\n\n' 
@@ -68,6 +83,9 @@ printf 'This may take some time ...\n\n'
 printf 'Updating Operating System ... '
 source "$ScriptPath"/update >/dev/null 2>&1
 printf 'Complete\n\n'
+
+# Check for Python3 - Install if not found
+command -v python3 >/dev/null 2>&1 || sudo apt -y install python3 >/dev/null 2>&1 };
 
 # Setup and activate Python
 printf 'Configuring Python ... '
@@ -98,23 +116,21 @@ case "$gpscode" in
   while true; do
    printf '\nWould you like to use your current location or home QTH from the FCC for the installation (C/f)? '; read -n1 -r response
    case $response in
-    C|c) printf '\n'; lat=$gpslat; lon=$gpslon; grid=$hamgrid; break ;; F|f) break ;; *) printf '\nInvalid response, please select c (or C) for Current location or f (or F) for FCC location' ;; esac
+    C|c) printf '\n'; lat=$gpslat; lon=$gpslon; grid=$hamgrid; break ;; F|f) ;; *) printf '\nInvalid response, please select c (or C) for Current location or f (or F) for FCC location' ;; esac
    done
-  ;;
- 1) printf 'found on port %s no satellite fix.\n' "$gpsport" ;;
- 2) printf 'found on port %s no data is being received.\n' "$gpsport" ;;
- 3) printf 'not found!\n' ;;
- *) ;;
+  break ;;
+ 1) printf 'found on port %s no satellite fix.\n' "$gpsport"; break ;;
+ 2) printf 'found on port %s no data is being received.\n' "$gpsport"; break ;;
+ 3) printf 'not found!\n'; break ;;
+ *) break ;;
 esac
 
-case "$gpscode" in 
- 1|2|3|*)
-  printf 'Please note: If the port is reported as nodata, there may be artefacts causing inconssitent results.\n'
-  printf 'This is usually caused by a GPS device being attached and then removed, no GPS appears to be connected.\n'  
-  printf '\nContinue with information from your home QTH - Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"
-  YnContinue
-  ;;
-esac
+printf 'Please note: If the port is reported as nodata, there may be artefacts causing inconssitent results.\n'
+printf 'This is usually caused by a GPS device being attached and then removed, no GPS appears to be connected.\n'  
+printf '\nContinue with information from your home QTH - Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"
+YnContinue
+
+# if no lat lon, allow manual entry
 
 # Generate aprspass and axnodepass
 aprspass=$(python3 "$InstallPath"/Files/pyscripts/aprspass.py "$callsign")
@@ -137,6 +153,10 @@ fi
 done
 printf '\n' >> "$HomePath/.profile"
 
+# Write .dhinfo
+printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s' "$callsign" "$class" "$expiry" "$grid" "$lat" "$lon" "$licstat" "$forename" "$initial" "$surname" "$suffix" "$street" "$town" "$state" "$zip" "$country" > "$HomePath/.dhinfo"
+printf '\n'
+
 # Install Packages
 sudo apt -y install lastlog2 >/dev/null 2>&1
 
@@ -145,5 +165,5 @@ sudo apt -y install lastlog2 >/dev/null 2>&1
 # Reboot post install
 while true; do
   printf '\nDigiHub successfully installed.\nReboot Now (Y/n)? '; read -n1 -r response; case $response in
-    Y|y) sudo reboot; printf '\nRebooting' ;; N|n) deactivate >/dev/null 2>&1; printf '\nPlease reboot before attempting to access DigiHub features\n\n'; break ;; *) printf '\nInvalid response, please select Y/n' ;; esac
+    Y|y) sudo reboot; printf '\nRebooting'; break ;; N|n) deactivate >/dev/null 2>&1; printf '\nPlease reboot before attempting to access DigiHub features\n\n'; break ;; *) printf '\nInvalid response, please select Y/n' ;; esac
 done
