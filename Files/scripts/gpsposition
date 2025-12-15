@@ -1,17 +1,17 @@
 #!/bin/bash
 
-#
-# gpsposition
-# python script wrapper for gpsposition.py
-# uses hamgrid.py to calculate grid
-#
-# Version 1.0a
-#
-# Steve de Bode - KQ4ZCI - December 2025
-#
-# Input:	nene (GPS Device)
-# Output: Formatted Latitude, Longitude and grid
-#
+: <<'END'
+gpsposition
+python script wrapper for gpsposition.py
+uses hamgrid.py to calculate grid
+
+Version 1.0a
+
+Steve de Bode - KQ4ZCI - December 2025
+
+Input:	nene (GPS Device)
+Output: Formatted Latitude, Longitude and grid
+END
 
 if [ "$DigiHubGPSport" == "nogps" ]; then printf '\nNo GPS device is configured for DigiHub, please run editconfig if this is incorrect.\n\n'; exit 1; fi
 
