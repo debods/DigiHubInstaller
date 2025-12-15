@@ -9,6 +9,9 @@
 #
 # Steve de Bode - KQ4ZCI - December 2025
 #
+# Input:	nene (GPS Device)
+# Output: Formatted Latitude, Longitude and grid
+#
 
 if [ "$DigiHubGPSport" == "nogps" ]; then printf '\nNo GPS device is configured for DigiHub, please run editconfig if this is incorrect.\n\n'; exit 1; fi
 
