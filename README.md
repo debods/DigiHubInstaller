@@ -25,14 +25,14 @@ A number of the methods used to install, run and maintain DigiHub are included a
 
 | Command     | Purpose                                                     | Written in  |
 |:------------|:------------------------------------------------------------|:------------|
-aprspass        Generate an APRS password                                     bash/python  
-checkcall       Check a US callsign using the hamdb API                       bash         
-dwsetup         Install, or update an existing installation of Direwolf       bash         
-editconfig                                                                                 
-gpsposition                                                                                
-hamgrid         Calculate a Maidenhead ham grid from latitude and longitude   bash/python  
-sysinfo         System information                                            bash         
-whohami         Show user information held for current configuration          bash         
+aprspass      | Generate an APRS password                                   | bash/python |
+checkcall     | Check a US callsign using the hamdb API                     | bash        |
+dwsetup       | Install, or update an existing installation of Direwolf     | bash        |
+editconfig    |                                                             |             |
+gpsposition   |                                                             |             | 
+hamgrid       | Calculate a Maidenhead ham grid from latitude and longitude | bash/python |
+sysinfo       | System information                                          | bash        |
+whohami       | Show user information held for current configuration        | bash        |
 
 These along with other useful tools are located in DigiHub/scripts (included in the PATH after install).
 
