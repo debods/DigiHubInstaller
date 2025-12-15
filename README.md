@@ -82,7 +82,7 @@ Credits
 |:----------|:----------------------------------------------|:--------------------|
 | hamdb.org | https://hamdb.org                             | API Calls           |
 | Direwolf  | https://github.com/wb2osz/direwolf            | Direwolf            |
-| scripts   | https://github.com/dslotter/ham_radio_scripts | FLDigi Installation |
+| scripts   | https://github.com/dslotter/ham_radio_scripts | FLdigi Installation |
 | DigiPi    | https://digipi.org                            | Concept & content   |
 
 
