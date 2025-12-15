@@ -1,16 +1,17 @@
 #!/bin/bash
 
-#
-# uninstall
-# DigiHub uninstallation
-#
-# Version 1.0a
-#
-# Steve de Bode - KQ4ZCI - December 2025
-#
-# Input:	none
-# Output: none - interactive
-#
+: <<'END'
+uninstall
+DigiHub uninstallation
+
+Version 1.0a
+
+Steve de Bode - KQ4ZCI - December 2025
+
+Input:	none
+Output: none - interactive
+END
+
 # Uninstallation warning ignore if non-interactive
 if [ "$1" != "ni" ]; then
 while true; do
