@@ -11,7 +11,7 @@ The installation script has been built and tested on Debian trixie 64-bit meanin
 
 The primary design goal of DigiHub is flexibility and configurability:
 
-Digihub:
+Digihub
 |:------------------------------------------------------------------------------------------------------|
 Validates (US) callsigns.
 Editable coinfiguration
