@@ -32,7 +32,7 @@ A number of the methods used to install, run and maintain DigiHub are included a
 aprspass      | Generate an APRS password                                   | bash/python |
 checkcall     | Check a US callsign using the hamdb API                     | bash        |
 dwsetup       | Install, or update an existing installation of Direwolf     | bash        |
-editconfig    |                                                             |             |
+editconfig    | Edit the DigHub installation (callsign, grid etc.)          |             |
 gpsposition   |                                                             |             | 
 hamgrid       | Calculate a Maidenhead ham grid from latitude and longitude | bash/python |
 sysinfo       | System information                                          | bash        |
