@@ -36,7 +36,7 @@ editconfig    | Edit the DigHub installation (callsign, grid etc.)          | ba
 gpsposition   | Get current GPS position from GPS device                    | bash/python |
 hamgrid       | Calculate a Maidenhead ham grid from latitude and longitude | bash/python |
 sysinfo       | System information                                          | bash        |
-unistall      | Remove DigiHub                                              |             |
+uninstall     | Remove DigiHub                                              |             |
 whohami       | Show user information held for current configuration        | bash        |
 
 These along with other valuable tools are located in DigiHub/scripts (included in the PATH after install).
@@ -57,7 +57,7 @@ Installation
 -------------
 Ensure the Operating System you are installing on has an active Internet connection and, if you intend to use a GPS, it is connected and working.
 
-Note: python3, git (to cover the instance of copying rather than downloading the repository), and curl will be installed as part of the process if not already available and will NOT be removed if DigiHub is removed.
+**Note:** *python3, wget and curl will be installed as part of the process if not already available and will NOT be removed if DigiHub is removed.*
 
 Issue the following commands:
 
