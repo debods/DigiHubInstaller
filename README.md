@@ -53,13 +53,12 @@ sudo apt install git
 
 Clone the repository:
 
-git clone <DigiHub repository>
+git clone [<DigiHub repository>](https://github.com/debods/DigiHubHam.git)
 
-Change directory to the install folder and make the installer executable:
+Change directory to the install folder, make the installer executable and run it:
 
-cd <Install Folder>
+```bash
+cd DigiHubHam
 chmod +x install.sh
-
-Run the installer
-
-./install.sh <callsign> (e.g. ./install.sh kq4zci or ./install.sh non-us)
+./install.sh <callsign>
+```
