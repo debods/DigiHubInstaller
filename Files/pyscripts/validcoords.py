@@ -1,4 +1,14 @@
+"""
+validcoords.py
+Calculate APRS Password from ham callsign
 
+Version 1.0a
+
+Steve de Bode - KQ4ZCI - December 2025
+
+Input:	callsign
+Output: (APRS password)
+"""
 
 def validate(latitude, longitude):
     if not isinstance(latitude, (int, float)):
