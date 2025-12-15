@@ -1,18 +1,20 @@
 #!/bin/bash
 
-#
-# checkcall
-# Get FCC Information by ham Callsign
-#
-# Input:	callsign
-# Output: formatted FCC Information
-# Version 1.0a
-#
-# Steve de Bode - KQ4ZCI - December 2025
-#
-# Input:	callsign
-# Output: none - interactive
-#
+: <<'END'
+
+checkcall
+Get FCC Information by ham Callsign
+
+Input:	callsign
+Output: formatted FCC Information
+Version 1.0a
+
+Steve de Bode - KQ4ZCI - December 2025
+
+Input:	callsign
+Output: none - interactive
+
+END
 
 # Check Parameters
 if [ "$#" -ne "1" ]; then
