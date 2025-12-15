@@ -2,12 +2,17 @@
 
 #
 # whohami
-# read curent user information from ~/.dhinfo
+# read and print curent user information from ~/.dhinfo
+# Linux users should get the play on words!
 #
 # Version 1.0a
 #
 # Steve de Bode - KQ4ZCI - December 2025
 #
+# Input:	none
+# Output: none - informational
+#
+
 colb='\033[34m'; ncol='\e[0m'
 
 IFS=',' read -r callsign class expiry grid lat lon licstat forename initial surname suffix street town state zip country < "/home/$USER/.dhinfo"
