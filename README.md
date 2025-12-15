@@ -34,6 +34,7 @@ editconfig    |                                                             |   
 gpsposition   |                                                             |             | 
 hamgrid       | Calculate a Maidenhead ham grid from latitude and longitude | bash/python |
 sysinfo       | System information                                          | bash        |
+unistall      | Remove DigiHub                                              |             |
 whohami       | Show user information held for current configuration        | bash        |
 
 These along with other useful tools are located in DigiHub/scripts (included in the PATH after install).
@@ -52,6 +53,8 @@ To enable users outside the US to use DigiHub, entering non-us (or NON-US) as th
 Installation
 -------------
 Ensure the Operating System you are installing on has an active Internet connection and, if you intend to use a GPS, it is connected and working.
+
+Note: python3, git (to cover the instacence of copying rather than downloading the repository),and curl will be installed as part of the process if not already available and wiil NOT be removed during uninstallation.
 
 Issue the following commands:
 
