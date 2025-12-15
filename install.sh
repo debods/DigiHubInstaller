@@ -1,16 +1,16 @@
 #! /bin/bash
 
-#
-# install.sh
-# DigiHub installation and configuration script
-#
-# Version 1.0a
-#
-# Steve de Bode - KQ4ZCI - December 2025
-#
-# Input:	callsign
-# Output: none - interactive
-#
+: <<'END'
+install.sh
+DigiHub installation and configuration script
+
+Version 1.0a
+
+Steve de Bode - KQ4ZCI - December 2025
+
+Input:	callsign
+Output: none - interactive
+END
 
 # Check Parameters
 if [ "$#" -ne "1" ]; then
