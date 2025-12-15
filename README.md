@@ -2,13 +2,13 @@ DigiHub - Digital Hub for ham radio
 ===================================
 Overview
 --------
-DigiHub is not an application or environment, it is a curated collection of ham radio utilities and applications geared toward Digital ham radio Operations.
+DigiHub is not an application or environment; it is a curated collection of ham radio utilities and applications geared toward Digital ham radio Operations.
 
-It is designed to be an alternative to the popular DigiPi which is an excellent implementation and, is a highly recommended option for those setting out on the digital ham path.
+It is designed as an alternative to the popular DigiPi, which is an excellent implementation and is a highly recommended option for those setting out on the digital ham path.
 
-DigiHub, builds on the DigiPi concept and is designed to be installed on an existing Debian system rather than being a complete Operating System image.
+DigiHub builds on the DigiPi concept and is designed to be installed on an existing Debian system rather than being a complete Operating System image.
 
-The installation script has been built and tested on Debian trixie 64-bit meaning it can be installed on Raspberry Pi OS running on a Pi Zero 2W, 3, 4 or, 5.
+The installation script has been built and tested on Debian trixie 64-bit, which includes Raspberry Pi OS running on a Pi Zero 2W, 3, 4, or 5.
 
 The primary design goal of DigiHub is flexibility and configurability:
 
@@ -39,24 +39,25 @@ sysinfo       | System information                                          | ba
 unistall      | Remove DigiHub                                              |             |
 whohami       | Show user information held for current configuration        | bash        |
 
-These along with other useful tools are located in DigiHub/scripts (included in the PATH after install).
+These along with other valuable tools are located in DigiHub/scripts (included in the PATH after install).
 
 GPS Devices
 -----------
 DigiHub will detect and use correctly installed and working GPS devices.
 
-A recommended GPS device is a Waveshare L76X Multi-GNSS HAT (avaialble [here](https://www.waveshare.com/l76x-gps-hat.htm)), it works with any PC hardware via USB, and Raspberry Pi via the GPIO header.
+A recommended GPS device is a Waveshare L76X Multi-GNSS HAT (available [here](https://www.waveshare.com/l76x-gps-hat.htm)). It works with any PC hardware via USB and with Raspberry Pi via the GPIO header.
 
 Users without a US callsign
 ---------------------------
-DigiHub leverages an API for callsigns and user data which in the US is reliable, unfortunately outside the US this is not the case. 
-To enable users outside the US to use DigiHub, entering non-us (or NON-US) as the callsign when installing DigiHub (e.g. ./install.sh NON-US) allows manual entry of the unvalidated callsign and other required information.
+DigiHub leverages an API for callsign validation and user data, which is reliable in the US; unfortunately, outside the US, this is not the case.
+
+To enable ham operators outside the US to use DigiHub, entering non-us (or NON-US) as the callsign when installing DigiHub, e.g., ./install.sh NON-US, allows manual entry of the unvalidated callsign and other required information.
 
 Installation
 -------------
 Ensure the Operating System you are installing on has an active Internet connection and, if you intend to use a GPS, it is connected and working.
 
-Note: python3, git (to cover the instacence of copying rather than downloading the repository),and curl will be installed as part of the process if not already available and wiil NOT be removed during uninstallation.
+Note: python3, git (to cover the instance of copying rather than downloading the repository), and curl will be installed as part of the process if not already available and will NOT be removed if DigiHub is removed.
 
 Issue the following commands:
 
