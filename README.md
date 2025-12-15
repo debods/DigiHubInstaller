@@ -80,6 +80,7 @@ Credits
 DigiPi    https://digipi.org
 Direwolf  https://github.com/wb2osz/direwolf
 hamdb     https://hamdb.org
+scripts   https://github.com/dslotter/ham_radio_scripts
 
 
 
