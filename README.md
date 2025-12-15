@@ -7,7 +7,7 @@ It is designed to be an alternative to the popular DigiPi which is an excellent 
 DigiHub, builds on the DigiPi concept and unlike DigiPi is designed to be installed on an existing Debian system.
 The installation script has been built and tested on Debian trixie 64-bit meaning it can be installed on Raspberry Pi OS running on a Pi Zero 2W, 3, 4 or, 5.
 
-The primary benefit of DigiHub is it's flexibily and configurability. (list)
+The primary benefit of DigiHub is it's flexibily and configurability.
 Users without a US callsign
 ---------------------------
 DigiHub leverages an API for callsigns and user data which in the US is reliable, unfortunately outside the US this is not the case. 
