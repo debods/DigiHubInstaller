@@ -1,16 +1,16 @@
 #!/bin/bash
 
-#
-# hamgrid
-# python script wrapper for hamgrid.py
-#
-# Version 1.0a
-#
-# Steve de Bode - KQ4ZCI - December 2025
-#
-# Input:	latitude Longitude
-# Output: Formatted grid
-#
+: <<'END'
+hamgrid
+python script wrapper for hamgrid.py
+
+Version 1.0a
+
+Steve de Bode - KQ4ZCI - December 2025
+
+Input:	latitude Longitude
+Output: Formatted grid
+END
 
 # Check Parameters
 if [ "$#" -ne "2" ]; then
