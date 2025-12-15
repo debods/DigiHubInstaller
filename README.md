@@ -9,16 +9,30 @@ The installation script has been built and tested on Debian trixie 64-bit meanin
 
 The primary benefit of DigiHub is it's flexibily and configurability.
 
+A number of the methods used to install, run and maintain DigiHub are included as command line utilities:
+aprspass        -   Generate an APRS password (bash/python)
+checkcall       -   Check a US callsign using the hamdb API (bash)
+dwsetup         -   Install, or update an existing installation of Direwolf (bash)
+editconfig      -
+gpsposition     -
+hamgrid         -   Calculate a Maidenhead ham grid from latitude and longitude (bash/python)
+sysinfo         -   System information (bash)
+whohami         -   Show user information held for current configuratiom
+
+GPS Devices
+-----------
+DigiHub will detect and use correctly installed and working GPS devices.
+
+A recommended GPS device is a Waveshare L76X Multi-GNSS HAT, it works with any PC hardware via USB, and Raspberry Pi via the GPIO header.
+
 Users without a US callsign
 ---------------------------
 DigiHub leverages an API for callsigns and user data which in the US is reliable, unfortunately outside the US this is not the case. 
-To enable users outside the US to use DigiHub, entering non-us (or NON-US) as the callsign (e.g. ./install.sh NON-US) when installing DigiHub will allow manual entry of the unvalidated callsign and other required information.
+To enable users outside the US to use DigiHub, entering non-us (or NON-US) as the callsign when installing DigiHub (e.g. ./install.sh NON-US) allows manual entry of the unvalidated callsign and other required information.
 
 
 
-GPS Devices
-DigiHub will detect and use correctly installed and working GPS devices.
-A recommended GPS device is a Waveshare L76X Multi-GNSS HAT, it works with any PC hardware via USB, and Raspberry Pi via the GPIO header.
+
 
 
 
@@ -27,12 +41,7 @@ can be installed for an individual or club callsign
 
 DigiHub webserver
 
-A number of the methods used to install, run and maintain DigiHub have been made into command line utilities:
-aprspass    -   Generate an APRS password (bash/python)
-checkcall   -   Check a US callsign using the hamdb API (bash)
-dwsetup     -   Install, or update an existing installation of, Direwolf (bash)
-hamgrid     -   Calculate a Maidenhead ham grid from latitude and longitude (bash/python)
-sysinfo     -   System information (bash)
+
 
 These along with other useful tools are located in DigiHub/scripts (included in the PATH after install).
 
