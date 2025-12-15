@@ -8,7 +8,8 @@ DigiHub, builds on the DigiPi concept and unlike DigiPi is designed to be instal
 The installation script has been built and tested on Debian trixie 64-bit meaning it can be installed on Raspberry Pi OS running on a Pi Zero 2W, 3, 4 or, 5.
 
 The primary benefit of DigiHub is it's flexibily and configurability. (list)
-###Users without a US callsign
+Users without a US callsign
+---------------------------
 DigiHub leverages an API for callsigns and user data which in the US is reliable, unfortunately outside the US this is not the case. 
 To enable users outside the US to use DigiHub, entering non-us (or NON-US) as the callsign (e.g. ./install.sh NON-US) when installing DigiHub will allow manual entry of the unvalidated callsign and other required information.
 
