@@ -161,10 +161,15 @@ case "$gpscode" in
  *) printf 'scripting error - exiting\n'; exit 1 ;;
 esac
 
-printf 'Please note: If the port is reported as nodata, there may be artefacts causing inconssitent results.\n'
-printf 'This is usually caused by a GPS device being attached and then removed, no GPS appears to be connected.\n'  
-printf '\nContinue with information from your home QTH - Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"
-YnContinue
+case "$gpscode" in
+ 1|2|3)
+  printf '\nPlease note: If the port is reported as nodata, there may be artefacts causing inconssitent results.\n'
+  printf 'This is usually caused by a GPS device being attached and then removed, no GPS appears to be connected.\n'  
+  printf '\nContinue with information from your home QTH - Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"
+  YnContinue
+ *)
+  printf 'scripting error - exiting\n'; exit 1 ;;
+esac
 
 # Generate aprspass and axnodepass
 aprspass=$(python3 "$InstallPath"/Files/pyscripts/aprspass.py "$callsign")
