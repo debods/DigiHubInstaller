@@ -158,7 +158,7 @@ case "$gpscode" in
  1) printf 'found on port %s no satellite fix.\n' "$gpsport" ;;
  2) printf 'found on port %s no data is being received.\n' "$gpsport" ;;
  3) printf 'not found!\n' ;;
- *) ptintf 'scripting error - exiting\n"; exit 1 ;;
+ *) printf 'scripting error - exiting\n'; exit 1 ;;
 esac
 
 printf 'Please note: If the port is reported as nodata, there may be artefacts causing inconssitent results.\n'
