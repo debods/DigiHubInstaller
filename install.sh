@@ -170,6 +170,7 @@ case "$gpscode" in
   printf '\nThe raw report from your GPS is Port: %s Status: %s\n'  "$gpsport" "$gpsstatus"
   printf '\nContinue with information from your home QTH - Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"
   YnContinue ;;
+  # If no, need to delete ~/Digi
 esac
 
 # Generate aprspass and axnodepass
