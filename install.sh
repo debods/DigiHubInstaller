@@ -167,7 +167,7 @@ case "$gpscode" in
   printf 'This is usually caused by a GPS device being attached and then removed, no GPS appears to be connected.\n'
   printf '\nThe raw report from your GPS is Port: %s Status: %s\n'  "$gpsport" "$gpsstatus"
   printf '\nContinue with information from your home QTH - Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"
-  YnContinue
+  YnContinue ;;
  *) printf 'scripting error - exiting\n'; exit 1 ;;
 esac
 
