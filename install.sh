@@ -155,7 +155,6 @@ done ;;
  1) printf 'found on port %s no satellite fix.\n' "$gpsport" ;;
  2) printf 'found on port %s no data is being received.\n' "$gpsport" ;;
  3) printf 'not found!\n' ;;
- *) printf 'scripting error - exiting\n'; exit 1 ;;
 esac
 
 case "$gpscode" in
@@ -165,7 +164,6 @@ case "$gpscode" in
   printf '\nThe raw report from your GPS is Port: %s Status: %s\n'  "$gpsport" "$gpsstatus"
   printf '\nContinue with information from your home QTH - Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"
   YnContinue ;;
- *) printf 'scripting error - exiting\n'; exit 1 ;;
 esac
 
 # Generate aprspass and axnodepass
