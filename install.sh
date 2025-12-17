@@ -12,11 +12,9 @@ Input:	callsign
 Output: none - interactive
 END
 
-# Variables
+### VARIABLES ###
 colr='\e[31m'; colb='\033[34m'; ncol='\e[0m'
-    
-# Script Directory Variables
-WebPath="/var/www/html"
+#WebPath="/var/www/html"
 HomePath="/home/$USER"
 DigiHubHome="$HomePath/DigiHub"
 ScriptPath="$DigiHubHome/scripts"
@@ -43,7 +41,6 @@ PromptOpt() {
 }
 
 # Set variables to "Unknown" if they are empty/whitespace
-# Usage: SetUnknownIfEmpty var1 var2 ...
 SetUnknownIfEmpty() {
  local v
  for v in "$@"; do
@@ -51,11 +48,8 @@ SetUnknownIfEmpty() {
  done
 }
 
-
 # Editable prompt
 # Usage: PromptEdit var_name "Prompt: " required(0|1)
-# - Shows current value in [brackets] if set
-# - Enter keeps current value
 PromptEdit() {
  local var_name=$1 prompt=$2 required=${3:-0}
  local current value
@@ -215,7 +209,49 @@ trap _on_exit EXIT
 trap '_on_signal INT' INT
 trap '_on_signal TERM' TERM
 
-### Script ####
+BuildFullName() {
+  local parts=()
+
+  # Only include if non-empty AND not "Unknown"
+  [[ -n "$forename" && "$forename" != "Unknown" ]] && parts+=("$forename")
+  [[ -n "$initial"  && "$initial"  != "Unknown" ]] && parts+=("$initial")
+  [[ -n "$surname"  && "$surname"  != "Unknown" ]] && parts+=("$surname")
+
+  # Suffix is special: append to the end (no extra space issues)
+  if [[ -n "$suffix" && "$suffix" != "Unknown" ]]; then
+    parts+=("$suffix")
+  fi
+
+  if ((${#parts[@]} == 0)); then
+    fullname="Unknown"
+  else
+    # Join with single spaces
+    fullname="${parts[*]}"
+  fi
+}
+
+BuildAddress() {
+  local parts=()
+
+  [[ -n "$street" && "$street" != "Unknown" ]] && parts+=("$street")
+  [[ -n "$town"   && "$town"   != "Unknown" ]] && parts+=("$town")
+
+  # Combine state + ZIP if either exists
+  local statezip=""
+  [[ -n "$state" && "$state" != "Unknown" ]] && statezip="$state"
+  [[ -n "$zip"   && "$zip"   != "Unknown" ]] && statezip="${statezip:+$statezip }$zip"
+  [[ -n "$statezip" ]] && parts+=("$statezip")
+
+  [[ -n "$country" && "$country" != "Unknown" ]] && parts+=("$country")
+
+  if ((${#parts[@]} == 0)); then
+    address="Unknown"
+  else
+    address=$(IFS=', '; echo "${parts[*]}")
+  fi
+}
+
+### MAIN SCRIPT ####
 
 # Check Parameters
 if [ "$#" -ne "1" ]; then
@@ -277,12 +313,12 @@ if [ "${1^^}" == "NON-US" ]; then
  printf '\n'
  if YnCont "Enter name details (All fields are Optional) - (y/N)? "; then
   printf '\n'
-  PromptEdit forename "Forename" 0
+   PromptEdit forename "Forename" 0
    PromptEdit initial "Initial" 0
    PromptEdit surname "Surname" 0
    PromptEdit suffix "Suffix" 0
  fi
-
+ 
  # Optional class, expiry, licstat
  printf '\n'
  if YnCont "Enter license details? (All fields are Optional) - (y/N)? "; then
@@ -299,9 +335,9 @@ if [ "${1^^}" == "NON-US" ]; then
  printf '\n'
 
  # Check for correct Callsign
- printf '%b' '\nDigiHub will be installed for callsign "' "$colb" "${callsign^^}" "$ncol" '"\nUsing the following details:\n' 
+ printf '%b' '\nDigiHub will be installed for callsign "' "$colb" "${callsign^^}" "$ncol" '"\nUsing the following details:\n\n' 
+ 
  # String coantication and cleanup
- fullname="$forename $initial $surname $suffix"; fullname=$(echo "$fullname" | xargs)
  address="$street, $town, $state $zip $country"; address="${address##[ ,]*}"
 
  # Convert Empty Fields to Unknown
@@ -309,18 +345,14 @@ if [ "${1^^}" == "NON-US" ]; then
   [[ -z ${!var//[[:space:]]/} ]] && printf -v "$var" '%s' "Unknown"
  done
 
- # Convert License Class
- case "$class" in "T") class="Technician" ;; "G") class="General" ;; "E") class="Extra" ;; "N") class="Novice" ;; "A") class="Advanced" ;; esac
- # Convert License Status
- case "$licstat" in "A") licstat="Active" ;; "E") licstat="Expired" ;; "P") licstat="Pending" ;; esac
  printf 'License:\t%s - Expiry %s (%s)\nName:\t\t%s\nAddress:\t%s\nCoordinates:\tGrid: %s Latitude: %s Longitude %s\n\n' "$class" "$expiry" "$licstat" "$fullname" "$address" "$grid" "$lat" "$lon"
 fi
 
-# Ensure optional fields show as "Unknown" (instead of blank) before review/edit
-SetUnknownIfEmpty class expiry licstat forename initial surname suffix street town state zip country
+# Ensure optional fields show as "Unknown" (instead of blank) before review/edit - except initial and suffix
+SetUnknownIfEmpty class expiry licstat forename surname street town state zip country
 
 # Final review/edit of captured values
-ReviewAndEdit
+ReviewAndEdit; BuildFullName; BuildAddress
 
 # Check for exising installation and warn
 if grep -qF "DigiHub" "$HomePath/.profile"; then
@@ -328,7 +360,7 @@ if grep -qF "DigiHub" "$HomePath/.profile"; then
  YnCont &&  "$ScriptPath"/uninstall "ni" >/dev/null 2>&1
 fi
 
-printf 'This may take some time ...\n\n' 
+printf '\nThis may take some time ...\n\n' 
 
 # Update OS
 printf 'Updating Operating System ... '
@@ -348,10 +380,8 @@ if [ ! -d "$venv_dir" ]; then
  # Install Python Packages
   sudo apt -y install python3-pip >/dev/null 2>&1
   printf 'Installing required Python packages ... '
-  sudo "$venv_dir"/bin/pip3 install pynmea2 pyserial >/dev/null 2>&1
- deactivate
+  sudo "$venv_dir"/bin/pip3 install pynmea2 pyserial >/dev/null 2>&1; deactivate; printf 'Complete\n\n'
 fi
-printf 'Complete\n\n'
 
 # Check GPS device Installed
 printf 'Checking for GPS device ... '
@@ -371,8 +401,8 @@ case "$gpscode" in
   gpsposition=$(python3 "$InstallPath"/Files/pyscripts/gpsposition.py)
   IFS=',' read -r gpslat gpslon <<< "$gpsposition"
   hamgrid=$(python3 "$InstallPath"/Files/pyscripts/hamgrid.py "$gpslat" "$gpslon")
-  printf 'found on port %s and ready.\nCurrent coordinates\tLatitude: %s Longitude: %s Grid: %s\nFCC coordinates:\tLatitude: %s Longitude: %s Grid: %s\n' "$gpsport" "$gpslat" "$gpslon" "$hamgrid" "$lat" "$lon" "$grid"
-while :; do IFS= read -r -n1 -p $'\nWould you like to use your current location or home QTH from the FCC for the installation (c/f)? ' response </dev/tty; printf '\n'
+  printf 'found on port %s and ready.\nCurrent coordinates\tLatitude: %s Longitude: %s Grid: %s\nFCC/entered coordinates:\tLatitude: %s Longitude: %s Grid: %s\n' "$gpsport" "$gpslat" "$gpslon" "$hamgrid" "$lat" "$lon" "$grid"
+while :; do IFS= read -r -n1 -p $'\nWould you like to use the GPS location or FCC/entered coordinates for the installation (c/f)? ' response </dev/tty; printf '\n'
   case "$response" in [Cc]) lat=$gpslat; lon=$gpslon; grid=$hamgrid; break ;; [Ff]) break ;; *)    printf 'Invalid response, please select c/C for Current or f/F for FCC\n' ;; esac
 done ;;
  1) printf 'found on port %s no satellite fix.\n' "$gpsport" ;;
@@ -422,6 +452,6 @@ sudo apt -y install lastlog2 >/dev/null 2>&1
 
 # Reboot post install
 while true; do
-  printf '\nDigiHub successfully installed.\nReboot Now \(Y/n\)? '; read -n1 -r response; case $response in
-    Y|y) sudo reboot; printf '\nRebooting\n'; break ;; N|n) deactivate >/dev/null 2>&1; printf '\nPlease reboot before attempting to access DigiHub features\n\n'; break ;; *) printf '\nInvalid response, please select Y/n' ;; esac
+  printf '\nDigiHub successfully installed.\nReboot Now (Y/n)? '; read -n1 -r response; case $response in
+    Y|y) sudo reboot; printf '\nRebooting\n' N|n) deactivate >/dev/null 2>&1; printf '\nPlease reboot before attempting to access DigiHub features\n\n'; exit 0 ;; *) printf '\nInvalid response, please select Y/n' ;; esac
 done
