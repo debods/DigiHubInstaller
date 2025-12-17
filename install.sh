@@ -42,6 +42,120 @@ PromptOpt() {
  printf -v "$var_name" '%s' "$value"
 }
 
+# Editable prompt
+PromptEdit() {
+ local var_name=$1 prompt=$2 required=${3:-0}
+ local current value
+
+ while :; do
+  current=${!var_name}
+
+  if [[ -n $current ]]; then
+   read -rp "${prompt} [${current}]: " value
+  else
+   read -rp "${prompt}: " value
+  fi
+
+  # Replace if user typed something
+  if [[ -n $value ]]; then
+   printf -v "$var_name" '%s' "$value"
+   return 0
+  fi
+
+  # Keep existing if Enter and already set
+  if [[ -n $current ]]; then
+   return 0
+  fi
+
+  # Allow empty if not required
+  if (( required == 0 )); then
+   printf -v "$var_name" '%s' ""
+   return 0
+  fi
+
+  printf 'This field is required.\n' >&2
+ done
+}
+
+# Review & edit all captured values before installing
+ReviewAndEdit() {
+ local choice
+
+ while true; do
+  printf '\n================ REVIEW =================\n'
+  printf ' 1) Callsign:   %s\n' "${callsign^^}"
+  printf ' 2) Latitude:   %s\n' "$lat"
+  printf ' 3) Longitude:  %s\n' "$lon"
+  printf ' 4) Grid:       %s\n' "$grid"
+  printf ' 5) Class:      %s\n' "$class"
+  printf ' 6) Expiry:     %s\n' "$expiry"
+  printf ' 7) Lic Status: %s\n' "$licstat"
+  printf ' 8) Forename:   %s\n' "$forename"
+  printf ' 9) Initial:    %s\n' "$initial"
+  printf '10) Surname:    %s\n' "$surname"
+  printf '11) Suffix:     %s\n' "$suffix"
+  printf '12) Street:     %s\n' "$street"
+  printf '13) Town/City:  %s\n' "$town"
+  printf '14) State:      %s\n' "$state"
+  printf '15) ZIP/Postal: %s\n' "$zip"
+  printf '16) Country:    %s\n' "$country"
+  printf '========================================\n'
+
+  read -r -p $'\nEnter a number to edit (1-16), or press Enter to accept: ' choice
+  [[ -z $choice ]] && return 0
+
+  case "$choice" in
+   1) PromptEdit callsign "Callsign" 1 ;;
+   2) PromptEdit lat "Latitude (-90..90)" 1 ;;
+   3) PromptEdit lon "Longitude (-180..180)" 1 ;;
+   5) PromptEdit class "Class (e.g., T/G/E or Technician/General/Extra)" 0 ;;
+   6) PromptEdit expiry "Expiry" 0 ;;
+   7) PromptEdit licstat "License Status (e.g., A/E/P or Active/Expired/Pending)" 0 ;;
+   8) PromptEdit forename "Forename" 0 ;;
+   9) PromptEdit initial "Initial" 0 ;;
+  10) PromptEdit surname "Surname" 0 ;;
+  11) PromptEdit suffix "Suffix" 0 ;;
+  12) PromptEdit street "Street" 0 ;;
+  13) PromptEdit town "Town/City" 0 ;;
+  14) PromptEdit state "State/Province" 0 ;;
+  15) PromptEdit zip "ZIP/Postal Code" 0 ;;
+  16) PromptEdit country "Country" 0 ;;
+   4)
+    printf 'Grid is derived from Latitude/Longitude. Edit 2 or 3 to change it.\n' ;;
+   *)
+    printf 'Invalid selection.\n' >&2 ;;
+  esac
+
+  # If lat/lon changed (or user asked), validate and regenerate grid
+  if [[ $choice == 2 || $choice == 3 ]]; then
+   local max_tries=5 tries=0 rc
+   while true; do
+    python3 "$InstallPath"/Files/pyscripts/validcoords.py "$lat" "$lon"
+    rc=$?
+    case "$rc" in
+     0)
+      grid="$(python3 "$InstallPath"/Files/pyscripts/hamgrid.py "$lat" "$lon")"
+      if [[ -z $grid ]]; then echo "Error: hamgrid.py produced no output."; exit 4; fi
+      break
+      ;;
+     1)
+      ((tries++))
+      if (( tries >= max_tries )); then
+       printf '\nToo many invalid attempts, aborting installation.\n'
+       exit 1
+      fi
+      printf '\nInvalid latitude/longitude. Please try again:\n'
+      PromptEdit lat "Latitude (-90..90)" 1
+      PromptEdit lon "Longitude (-180..180)" 1
+      ;;
+     2) printf 'Error: validcoords.py usage or internal error.\n'; exit 2 ;;
+     *) printf 'Error: validcoords.py returned unexpected exit code %s.\n' "$rc"; exit 3 ;;
+    esac
+   done
+  fi
+ done
+}
+
 # y/n; return 0 for yes.
 YnCont() {
  local prompt=${1:-"Continue (y/N)? "} reply
@@ -118,7 +232,9 @@ if [ "${1^^}" == "NON-US" ]; then
   
  # Required callsign, lat, lon
  printf '\nPlease enter the requested information. Note that some fields are required unless stated otherwise.\n\n'
- PromptReq callsign " callsign: "; PromptReq lat " latitude: "; PromptReq lon " longitude: "
+ PromptEdit callsign "Callsign" 1
+ PromptEdit lat "Latitude (-90..90)" 1
+ PromptEdit lon "Longitude (-180..180)" 1
 
  # Validate lat lon and generate grid
  max_tries=5
@@ -150,7 +266,10 @@ if [ "${1^^}" == "NON-US" ]; then
  printf '\n'
  if YnCont "Enter name details (All fields are Optional) - (y/N)? "; then
   printf '\n'
-  PromptOpt forename " Forename: "; PromptOpt initial " Initial: "; PromptOpt surname " Surname: "; PromptOpt suffix " Suffix: "
+  PromptEdit forename "Forename" 0
+   PromptEdit initial "Initial" 0
+   PromptEdit surname "Surname" 0
+   PromptEdit suffix "Suffix" 0
  fi
 
  # Optional class, expiry, licstat
@@ -184,11 +303,11 @@ if [ "${1^^}" == "NON-US" ]; then
  # Convert License Status
  case "$licstat" in "A") licstat="Active" ;; "E") licstat="Expired" ;; "P") licstat="Pending" ;; esac
  printf 'License:\t%s - Expiry %s (%s)\nName:\t\t%s\nAddress:\t%s\nCoordinates:\tGrid: %s Latitude: %s Longitude %s\n\n' "$class" "$expiry" "$licstat" "$fullname" "$address" "$grid" "$lat" "$lon"
+fi
 
- printf '\nIf this is incorrect, select n (or N) and re-run the installer with the correct callsign. '
- YnCont || exit 1
-fi 
- 
+# Final review/edit of captured values
+ReviewAndEdit
+
 # Check for exising installation and warn
 if grep -qF "DigiHub" "$HomePath/.profile"; then
  printf '%b' "${colr}" 'Warning! ' "${ncol}" 'There appears to be an existing installation of DigiHub for ' "${colr}" "$DigiHubcall" "${ncol}" ' which will be replaced if you continue.\n'
@@ -249,8 +368,8 @@ esac
 
 case "$gpscode" in
  1|2)
-  printf '\nPlease note: If the port is reported as nodata, there may be artefacts causing inconssitent results.\n'
-  printf 'This is usually caused by a GPS device being attached and then removed, no GPS appears to be connected.\n'
+  printf '\nPlease note: If the port is reported as nodata, there may be artefacts causing inconsistent results.\n'
+  printf 'This is usually caused by a GPS device being attached and then removed; no GPS appears to be connected.\n'
   printf '\nThe raw report from your GPS is Port: %s Status: %s\n'  "$gpsport" "$gpsstatus"
   printf '\nContinue with information from your home QTH - Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"
   YnCont ;;
