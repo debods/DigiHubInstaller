@@ -29,17 +29,18 @@ A number of the methods used to install, run and maintain DigiHub are included a
 
 | Command     | Purpose                                                     | Written in  |
 |:------------|:------------------------------------------------------------|:------------|
-aprspass      | Generate an APRS password                                   | bash/python |
-checkcall     | Check a US callsign using the hamdb API                     | bash        |
-dwsetup       | Install, or update an existing installation of Direwolf     | bash        |
-editconfig    | Edit the DigHub installation (callsign, grid etc.)          | bash        |
-gpsposition   | Get current GPS position from GPS device                    | bash/python |
-hamgrid       | Calculate a Maidenhead ham grid from latitude and longitude | bash/python |
-sysinfo       | System information                                          | bash        |
-uninstall     | Remove DigiHub                                              | bash        |
-whohami       | Show user information held for current configuration        | bash        |
+| aprspass    | Generate an APRS password                                   | bash/python |
+| axnodepass  | Generat a random alphanumeic AX Node password               | bash        |
+| checkcall   | Check a US callsign using the hamdb API                     | bash        |
+| dwsetup     | Install, or update an existing installation of Direwolf     | bash        |
+| editconfig  | Edit the DigHub user information                            | bash        |
+| gpsposition | Get current GPS position from GPS device                    | bash/python |
+| hamgrid     | Calculate a Maidenhead ham grid from latitude and longitude | bash/python |
+| sysinfo     | System information                                          | bash        |
+| uninstall   | Remove DigiHub                                              | bash        |
+| whohami     | Show user information held for current configuration        | bash        |
 
-These along with other valuable tools are located in DigiHub/scripts (included in the PATH after install).
+These along with other tools are located in DigiHub/scripts (included in the PATH after install).
 
 GPS Devices
 -----------

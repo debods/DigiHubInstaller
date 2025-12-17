@@ -336,9 +336,6 @@ if [ "${1^^}" == "NON-US" ]; then
 
  # Check for correct Callsign
  printf '%b' '\nDigiHub will be installed for callsign "' "$colb" "${callsign^^}" "$ncol" '"\nUsing the following details:\n\n' 
- 
- # String coantication and cleanup
- address="$street, $town, $state $zip $country"; address="${address##[ ,]*}"
 
  # Convert Empty Fields to Unknown
  for var in class expiry licstat fullname address; do
