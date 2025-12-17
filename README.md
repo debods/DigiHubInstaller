@@ -58,7 +58,8 @@ Installation
 -------------
 Ensure the Operating System you are installing on has an active Internet connection and, if you intend to use a GPS, it is connected and working.
 
-**Note:** *python3, wget and curl will be installed as part of the process if not already available and will NOT be removed if DigiHub is removed.*
+**Note:** *python3, wget and curl will be installed as part of the process if not already available and will NOT be removed if DigiHub is removed.  The system will also be updated.*
+
 
 Issue the following commands:
 
