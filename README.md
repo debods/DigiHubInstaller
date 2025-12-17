@@ -33,7 +33,7 @@ A number of the methods used to install, run and maintain DigiHub are included a
 | axnodepass  | Generat a random alphanumeic AX Node password               | bash        |
 | checkcall   | Check a US callsign using the hamdb API                     | bash        |
 | dwsetup     | Install, or update an existing installation of Direwolf     | bash        |
-| editconfig  | Edit the DigHub user information                            | bash        |
+| dhedit      | Edit the DigHub user information                            | bash        |
 | gpsposition | Get current GPS position from GPS device                    | bash/python |
 | hamgrid     | Calculate a Maidenhead ham grid from latitude and longitude | bash/python |
 | sysinfo     | System information                                          | bash        |
