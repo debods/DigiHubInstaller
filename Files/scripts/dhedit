@@ -12,13 +12,24 @@ Input:	none
 Output: none - interactive
 END
 
-#!/usr/bin/env bash
 # Force bash even if invoked via sh
 if [[ -z "${BASH_VERSION-}" ]]; then
   exec /usr/bin/env bash "$0" "$@"
 fi
 
 set -euo pipefail
+
+: <<'END'
+dhedit
+DigiHub User Configuration Editor
+
+Version 1.0a
+
+Steve de Bode - KQ4ZCI - December 2025
+
+Input:  none
+Output: none - interactive
+END
 
 HomePath="${HOME}"
 PROFILE_FILE="${HomePath}/.profile"
@@ -44,22 +55,24 @@ SetUnknownIfEmpty() {
 
 BuildFullName() {
   fullname=''
-  for p in "$forename" "$initial" "$surname" "$suffix"; do
-    [[ -n "$(trim "$p")" && "$p" != "Unknown" ]] && fullname="${fullname:+$fullname }$p"
+  for p in "${forename-}" "${initial-}" "${surname-}" "${suffix-}"; do
+    [[ -n "$(trim "$p")" && "$p" != 'Unknown' ]] && fullname="${fullname:+$fullname }$p"
   done
   [[ -z "$fullname" ]] && fullname='Unknown'
 }
 
 BuildAddress() {
   address=''
-  for p in "$street" "$town"; do
-    [[ -n "$(trim "$p")" && "$p" != "Unknown" ]] && address="${address:+$address, }$p"
+  for p in "${street-}" "${town-}"; do
+    [[ -n "$(trim "$p")" && "$p" != 'Unknown' ]] && address="${address:+$address, }$p"
   done
+
   local sz=''
-  [[ "$state" != "Unknown" ]] && sz="$state"
-  [[ "$zip"   != "Unknown" ]] && sz="${sz:+$sz }$zip"
+  [[ "${state-Unknown}" != 'Unknown' ]] && sz="${state}"
+  [[ "${zip-Unknown}"   != 'Unknown' ]] && sz="${sz:+$sz }${zip}"
   [[ -n "$sz" ]] && address="${address:+$address, }$sz"
-  [[ "$country" != "Unknown" ]] && address="${address:+$address, }$country"
+
+  [[ "${country-Unknown}" != 'Unknown' ]] && address="${address:+$address, }${country}"
   [[ -z "$address" ]] && address='Unknown'
 }
 
@@ -77,21 +90,44 @@ profile_set() {
 
 [[ -f "$PROFILE_FILE" ]] || { printf '%s\n' 'Missing ~/.profile'; exit 1; }
 
-callsign="$(profile_get DigiHubcall)"
-aprspass="$(profile_get DigiHubaprs)"
-axnodepass="$(profile_get DigiHubaxnode)"
-gpsport="$(profile_get DigiHubGPSport)"
-lat="$(profile_get DigiHubLat)"
-lon="$(profile_get DigiHubLon)"
-grid="$(profile_get DigiHubgrid)"
+# Pull mutable exports (if present)
+callsign="$(profile_get DigiHubcall || true)"
+aprspass="$(profile_get DigiHubaprs || true)"
+axnodepass="$(profile_get DigiHubaxnode || true)"
+gpsport="$(profile_get DigiHubGPSport || true)"
+lat="$(profile_get DigiHubLat || true)"
+lon="$(profile_get DigiHubLon || true)"
+grid="$(profile_get DigiHubgrid || true)"
 
-IFS=',' read -r \
-  callsign class expiry grid lat lon licstat \
-  forename initial surname suffix \
-  street town state zip country < "$DHINFO_FILE" 2>/dev/null || true
+# Pull .dhinfo (installer order)
+if [[ -f "$DHINFO_FILE" ]]; then
+  IFS=',' read -r \
+    callsign class expiry grid lat lon licstat \
+    forename initial surname suffix \
+    street town state zip country < "$DHINFO_FILE" 2>/dev/null || true
+fi
+
+# IMPORTANT: init all vars so set -u doesn't kill us if .dhinfo is missing/incomplete
+: "${callsign:=}"
+: "${class:=}"
+: "${expiry:=}"
+: "${grid:=}"
+: "${lat:=}"
+: "${lon:=}"
+: "${licstat:=}"
+: "${forename:=}"
+: "${initial:=}"
+: "${surname:=}"
+: "${suffix:=}"
+: "${street:=}"
+: "${town:=}"
+: "${state:=}"
+: "${zip:=}"
+: "${country:=}"
 
 SetUnknownIfEmpty callsign class expiry grid lat lon licstat \
                  forename surname street town state zip country
+# initial/suffix intentionally allowed to be blank
 
 BuildFullName
 BuildAddress
@@ -101,6 +137,7 @@ BuildAddress
 ReviewAndEdit() {
   while true; do
     printf '%s\n' '================ REVIEW ================='
+    printf '%s\n' '(.dhinfo fields - installer order)'
     printf ' 1) Callsign:   %s\n' "$callsign"
     printf ' 2) Class:      %s\n' "$class"
     printf ' 3) Expiry:     %s\n' "$expiry"
@@ -121,35 +158,42 @@ ReviewAndEdit() {
     printf ' Full Name: %s\n' "$fullname"
     printf ' Address:   %s\n' "$address"
     printf '%s\n' '----------------------------------------'
+    printf '%s\n' '(Mutable exports in ~/.profile)'
     printf '17) GPS Port:   %s\n' "$gpsport"
     printf '18) APRS Pass:  %s\n' "$aprspass"
     printf '19) AX25 Pass:  %s\n' "$axnodepass"
     printf '%s\n' '========================================'
-    read -r -p 'Select number to edit, Enter to save: ' c
+    read -r -p 'Select 1-19 to edit, Enter to save: ' c
     [[ -z "$c" ]] && break
-    read -r -p 'New value: ' v
+
     case "$c" in
-      1) callsign="$v" ;;
-      2) class="$v" ;;
-      3) expiry="$v" ;;
-      5) lat="$v" ;;
-      6) lon="$v" ;;
-      7) licstat="$v" ;;
-      8) forename="$v" ;;
-      9) initial="$v" ;;
-      10) surname="$v" ;;
-      11) suffix="$v" ;;
-      12) street="$v" ;;
-      13) town="$v" ;;
-      14) state="$v" ;;
-      15) zip="$v" ;;
-      16) country="$v" ;;
-      17) gpsport="$v" ;;
-      18) aprspass="$v" ;;
-      19) axnodepass="$v" ;;
+      1) read -r -p 'Callsign (US callsign or non-us): ' v; [[ -n "$v" ]] && callsign="$v" ;;
+      2) read -r -p 'License Class: ' v; [[ -n "$v" ]] && class="$v" ;;
+      3) read -r -p 'Expiry: ' v; [[ -n "$v" ]] && expiry="$v" ;;
+      4) read -r -p 'Grid: ' v; [[ -n "$v" ]] && grid="$v" ;;
+      5) read -r -p 'Latitude: ' v; [[ -n "$v" ]] && lat="$v" ;;
+      6) read -r -p 'Longitude: ' v; [[ -n "$v" ]] && lon="$v" ;;
+      7) read -r -p 'License Status: ' v; [[ -n "$v" ]] && licstat="$v" ;;
+      8) read -r -p 'Forename: ' v; [[ -n "$v" ]] && forename="$v" ;;
+      9) read -r -p 'Middle Initial (optional): ' v; initial="$v" ;;  # allow blank
+      10) read -r -p 'Surname: ' v; [[ -n "$v" ]] && surname="$v" ;;
+      11) read -r -p 'Suffix (optional): ' v; suffix="$v" ;;          # allow blank
+      12) read -r -p 'Street: ' v; [[ -n "$v" ]] && street="$v" ;;
+      13) read -r -p 'Town/City: ' v; [[ -n "$v" ]] && town="$v" ;;
+      14) read -r -p 'State: ' v; [[ -n "$v" ]] && state="$v" ;;
+      15) read -r -p 'ZIP/Postal: ' v; [[ -n "$v" ]] && zip="$v" ;;
+      16) read -r -p 'Country: ' v; [[ -n "$v" ]] && country="$v" ;;
+      17) read -r -p 'DigiHubGPSport (nogps or device port): ' v; gpsport="$v" ;;
+      18) read -r -p 'DigiHubaprs: ' v; aprspass="$v" ;;
+      19) read -r -p 'DigiHubaxnode: ' v; axnodepass="$v" ;;
+      *) printf '%s\n' 'Invalid selection.' >&2 ;;
     esac
-    SetUnknownIfEmpty callsign class expiry lat lon licstat \
-                     forename surname street town state zip country
+
+    # Normalize (NOT initial/suffix)
+    SetUnknownIfEmpty callsign class expiry grid lat lon licstat \
+                     forename surname street town state zip country \
+                     gpsport aprspass axnodepass
+
     BuildFullName
     BuildAddress
   done
