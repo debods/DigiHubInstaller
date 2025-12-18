@@ -12,13 +12,9 @@ Input:	none
 Output: none - interactive
 END
 
-# Uninstallation warning ignore if non-interactive
-if [ "$1" != "ni" ]; then
-while true; do
-  printf '\nThis action will completely remove DigiHub, continue (Y/n)? '; read -n1 -r response
-  case $response in Y|y) printf '\nRemoving DigiHub.\n'; break ;; N|n) printf '\nUninstall aborted.\n\n'; exit 0 ;; *) printf '\nInvalid response, please select (Y/n)\n' ;; esac
-done
-fi
+# Uninstallation warning 
+printf '\nThis action will completely remove DigiHub, continue (Y/n)? '; read -n1 -r response
+case $response in Y|y) printf '\nRemoving DigiHub.\n'; break ;; N|n) printf '\nUninstall aborted.\n\n'; exit 0 ;; *) printf '\nInvalid response, please select (Y/n)\n' ;; esac
 
 HomePath="/home/$USER"
 deactivate >/dev/null 2>&1
@@ -48,11 +44,9 @@ sudo rm -rf "$DigiHub"
 # Remove Packages
 
 
-# Reboot  ignore if non-interactive
-if [ "$1" != "ni" ]; then
+# Reboot
 while true; do
-  printf '\nReboot Now (Y/n) '; read -n1 -r response
-  case $response in
-    Y|y) printf '\nRebooting\n'; break ;; N|n) printf '\nA reboot is required to completely remove DigiHub.\n\n'; break ;; *) printf '\nInvalid response, please select Y/n' ;; esac
+ printf '\nReboot Now (Y/n) '; read -n1 -r response
+ case $response in     Y|y) printf '\nRebooting\n'; break ;; N|n) printf '\nA reboot is required to completely remove DigiHub.\n\n'; break ;; *) printf '\nInvalid response, please select Y/n' ;; esac
 done
-fi
+
