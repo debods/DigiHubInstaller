@@ -191,7 +191,6 @@ function CleanUp() {
  perl -i.bak -0777 -pe 's{\s+\z}{}m' ~/.profile >/dev/null 2>&1
  printf '\n' >> "$HomePath"/.profile
  rm "$HomePath"/.profile.bak* >/dev/null 2>&1 
- fi
  sudo rm -rf -- "$DigiHubHome"
  # remove installed packages
  exit 0
@@ -410,7 +409,7 @@ case "$gpscode" in
   gpsposition=$(python3 "$InstallPath"/Files/pyscripts/gpsposition.py)
   IFS=',' read -r gpslat gpslon <<< "$gpsposition"
   hamgrid=$(python3 "$InstallPath"/Files/pyscripts/hamgrid.py "$gpslat" "$gpslon")
-  printf 'found on port %s and ready.\nCurrent coordinates\tLatitude: %s Longitude: %s Grid: %s\nFCC/entered coordinates:\tLatitude: %s Longitude: %s Grid: %s\n' "$gpsport" "$gpslat" "$gpslon" "$hamgrid" "$lat" "$lon" "$grid"
+  printf 'found on port %s and ready.\nCurrent coordinates\t\tLatitude: %s Longitude: %s Grid: %s\nFCC/entered coordinates:\tLatitude: %s Longitude: %s Grid: %s\n' "$gpsport" "$gpslat" "$gpslon" "$hamgrid" "$lat" "$lon" "$grid"
 while :; do IFS= read -r -n1 -p $'\nWould you like to use the GPS location or FCC/entered coordinates for the installation (c/f)? ' response </dev/tty; printf '\n'
   case "$response" in [Cc]) lat=$gpslat; lon=$gpslon; grid=$hamgrid; break ;; [Ff]) break ;; *)    printf 'Invalid response, please select c/C for Current or f/F for FCC\n' ;; esac
 done ;;
@@ -462,5 +461,5 @@ sudo apt -y install lastlog2 >/dev/null 2>&1
 # Reboot post install
 while true; do
   printf '\nDigiHub successfully installed.\nReboot Now (Y/n)? '; read -n1 -r response; case $response in
-    Y|y) sudo reboot; printf '\nRebooting\n' N|n) deactivate >/dev/null 2>&1; printf '\nPlease reboot before attempting to access DigiHub features\n\n'; exit 0 ;; *) printf '\nInvalid response, please select Y/n' ;; esac
+    Y|y) sudo reboot; printf '\nRebooting\n' ;; N|n) deactivate >/dev/null 2>&1; printf '\nPlease reboot before attempting to access DigiHub features\n\n'; exit 0 ;; *) printf '\nInvalid response, please select Y/n' ;; esac
 done
