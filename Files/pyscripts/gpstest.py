@@ -18,20 +18,20 @@ Exit codes:
   3 = nogps
 """
 
-from __future__ import annotations
-
-import argparse
-import glob
-import os
-import re
-import stat
-import sys
-import time
-from dataclasses import dataclass
-from typing import Optional, Tuple
-
-import serial
+try:
+ from __future__ import annotations
+ import argparse
+ import glob
+ import os
+ import re
+ import stat
+ import sys
+ import time
+ from dataclasses import dataclass
+ from typing import Optional, Tuple
+ import serial
 from serial.tools import list_ports
+
 
 
 # Strict NMEA shape: $BODY*HH
