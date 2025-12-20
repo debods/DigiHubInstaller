@@ -282,9 +282,10 @@ if [ "${1^^}" != "NON-US" ]; then
  qth=$(curl -s "https://api.hamdb.org/v1/$1/csv/$1")
  IFS=',' read -r callsign class expiry grid lat lon licstat forename initial surname suffix street town state zip country <<< "$qth"
  if [ "$callsign" != "${1^^}" ]; then
-  printf '%b' '\nThe Callsign "' "$colb" "${1^^}" "$ncol" '" is either not valid in the US or not found, please check and re-run the installer with the correct callsign (or non-us).\n\n'
+  printf '%b' '\nThe Callsign "' "$colb" "${1^^}" "$ncol" '" is either not valid in the US or not found, please check and run the installer with the correct callsign (or non-us).\n\n'
   exit 1
  fi
+ printf '%b' '\nThe Callsign "' "$colb" "${1^^}" "$ncol" '" was found.  Please check the information below and edit as required.\n\n'
 fi
 
 # non-US information entry
