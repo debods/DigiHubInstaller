@@ -388,7 +388,7 @@ if [ ! -d "$venv_dir" ]; then
  # Install Python Packages
   sudo apt -y install python3-pip >/dev/null 2>&1
   printf 'Installing required Python packages ... '
-  sudo "$venv_dir"/bin/pip3 install pynmea2 pyserial >/dev/null 2>&1; deactivate; printf 'Complete\n\n'
+  sudo "$venv_dir"/bin/pip3 install pynmea2 pyserial >/dev/null 2>&1; printf 'Complete\n\n'
 fi
 
 # Check GPS device Installed
