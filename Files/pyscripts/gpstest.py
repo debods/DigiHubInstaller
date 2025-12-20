@@ -30,7 +30,10 @@ try:
  from dataclasses import dataclass
  from typing import Optional, Tuple
  import serial
-from serial.tools import list_ports
+ from serial.tools import list_ports
+except ModuleNotFoundError:
+        print(f"\nPython virtual environmnet required to execute,\n")
+        sys.exit(0)
 
 
 
