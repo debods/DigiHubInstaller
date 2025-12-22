@@ -285,7 +285,7 @@ if [ "${1^^}" != "NON-US" ]; then
   printf '%b' '\nThe Callsign "' "$colb" "${1^^}" "$ncol" '" is either not valid in the US or not found, please check and run the installer with the correct callsign (or non-us).\n\n'
   exit 1
  fi
- printf '%b' '\nThe Callsign "' "$colb" "${1^^}" "$ncol" '" was found.  Please check the information below and edit as required.\n\n'
+ printf '%b' '\nThe Callsign "' "$colb" "${1^^}" "$ncol" '" was found.  Please check the information below and edit as required.\n'
 fi
 
 # non-US information entry
