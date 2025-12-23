@@ -37,6 +37,22 @@ purge_on_abort=0
 
 ### FUNCTIONS ###
 
+Die() {
+ local msg=${1:-"Fatal error."}
+ printf '%bError:%b %s\n' "$colr" "$ncol" "$msg" >&2
+ exit 1
+}
+
+ReadTTY() {
+ # Usage: ReadTTY read_args...
+ # Example: ReadTTY -r -p "Prompt: " var
+ if [[ ! -r /dev/tty ]]; then
+  Die "No interactive terminal available (/dev/tty unreadable)."
+ fi
+ # shellcheck disable=SC2094
+ read "$@" </dev/tty
+}
+
 DetectExistingInstall() {
  # Heuristic: DigiHub marker in .profile means it was installed via this script
  if [[ -f "$HomePath/.profile" ]] && grep -qF "DigiHub" "$HomePath/.profile"; then
@@ -49,7 +65,9 @@ DetectExistingInstall() {
 # Optional values
 PromptOpt() {
  local var_name=$1 prompt=$2 value=""
- read -rp "$prompt" value
+ if ! ReadTTY -r -p "$prompt" value; then
+  Die "Failed to read input."
+ fi
  printf -v "$var_name" '%s' "$value"
 }
 
@@ -70,9 +88,13 @@ PromptEdit() {
   current=${!var_name-}
 
   if [[ -n $current ]]; then
-   read -rp "${prompt} [${current}]: " value
+   if ! ReadTTY -r -p "${prompt} [${current}]: " value; then
+    Die "Failed to read input."
+   fi
   else
-   read -rp "${prompt}: " value
+   if ! ReadTTY -r -p "${prompt}: " value; then
+    Die "Failed to read input."
+   fi
   fi
 
   # Replace if user typed something
@@ -120,7 +142,9 @@ ReviewAndEdit() {
   printf '16) Country:    %s\n' "$country"
   printf '========================================\n'
 
-  read -r -p $'\nEnter a number to edit (1-16), or press Enter to accept: ' choice
+  if ! ReadTTY -r -p $'\nEnter a number to edit (1-16), or press Enter to accept: ' choice; then
+   Die "Failed to read input."
+  fi
   [[ -z $choice ]] && return 0
 
   case "$choice" in
@@ -182,7 +206,9 @@ ReviewAndEdit() {
 YnCont() {
  local prompt=${1:-"Continue (y/N)? "} reply=""
  while :; do
-  read -n1 -rp "$prompt" reply
+  if ! ReadTTY -n1 -r -p "$prompt" reply; then
+   Die "Failed to read input."
+  fi
   printf '\n'
   case $reply in
    [Yy]) return 0 ;;
@@ -362,7 +388,9 @@ force_manual=0
 
 if [[ -z "$arg_cs" ]]; then
  # No argument: prompt for callsign; allow Enter to mean NOFCC/manual mode
- read -r -p "Enter callsign (or press Enter for manual entry): " cs
+ if ! ReadTTY -r -p "Enter callsign (or press Enter for manual entry): " cs; then
+  Die "Failed to read input."
+ fi
  cs="$(normalize_cs "${cs:-NOFCC}")"
 else
  cs="$(normalize_cs "$arg_cs")"
@@ -423,8 +451,8 @@ if (( force_manual == 1 )); then
      exit 1
     fi
     printf '\nInvalid latitude/longitude. Please try again:\n'
-    read -r -p " Enter latitude  (-90..90): " lat
-    read -r -p " Enter longitude (-180..180): " lon
+    ReadTTY -r -p " Enter latitude  (-90..90): " lat || Die "Failed to read input."
+    ReadTTY -r -p " Enter longitude (-180..180): " lon || Die "Failed to read input."
     ;;
    2) printf 'Error: validcoords.py usage or internal error.\n' >&2; exit 2 ;;
    *) printf 'Error: validcoords.py returned unexpected exit code %s.\n' "$rc" >&2; exit 3 ;;
@@ -567,7 +595,7 @@ case "$gpscode" in
    "$gpsport" "$gpslat" "$gpslon" "$hamgrid" "$lat" "$lon" "$grid"
 
   while :; do
-   IFS= read -r -n1 -p $'\nUse GPS location or FCC/entered coordinates for installation (c/f)? ' response </dev/tty
+   ReadTTY -r -n1 -p $'\nUse GPS location or FCC/entered coordinates for installation (c/f)? ' response || Die "Failed to read input."
    printf '\n'
    case "$response" in
     [Cc]) lat=$gpslat; lon=$gpslon; grid=$hamgrid; break ;;
@@ -642,7 +670,7 @@ printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
 # Reboot post install
 while true; do
  printf '\nDigiHub successfully installed.\nReboot now (Y/n)? '
- read -n1 -r response
+ ReadTTY -n1 -r response || Die "Failed to read input."
  case $response in
   Y|y) sudo reboot; printf '\nRebooting...\n'; exit 0 ;;
   N|n) printf '\nPlease reboot before using DigiHub.\n\n'; exit 0 ;;
