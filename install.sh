@@ -52,12 +52,14 @@ PromptOpt() {
  printf -v "$var_name" '%s' "$value"
 }
 
-# Set variables to "Unknown" if they are empty/whitespace (safe under set -u)
+# Set variables to "Unknown" if they are empty/whitespace (safe under set -u and ERR trap)
 SetUnknownIfEmpty() {
  local v val
  for v in "$@"; do
   val="${!v-}"
-  [[ -z ${val//[[:space:]]/} ]] && printf -v "$v" '%s' "Unknown"
+  if [[ -z ${val//[[:space:]]/} ]]; then
+   printf -v "$v" '%s' "Unknown"
+  fi
  done
 }
 
@@ -132,7 +134,9 @@ ReviewAndEdit() {
   printf '========================================\n'
 
   read -r -p $'\nEnter a number to edit (1-16), or press Enter to accept: ' choice
-  [[ -z $choice ]] && return 0
+  if [[ -z $choice ]]; then
+   return 0
+  fi
 
   case "$choice" in
    1) PromptEdit callsign "Callsign" 1 ;;
@@ -188,13 +192,13 @@ ReviewAndEdit() {
  done
 }
 
-# Build full name (ignores Unknown)
+# Build full name (ignores Unknown) - safe under ERR trap
 BuildFullName() {
  local parts=()
- [[ -n "$forename" && "$forename" != "Unknown" ]] && parts+=("$forename")
- [[ -n "$initial"  && "$initial"  != "Unknown" ]] && parts+=("$initial")
- [[ -n "$surname"  && "$surname"  != "Unknown" ]] && parts+=("$surname")
- [[ -n "$suffix"   && "$suffix"   != "Unknown" ]] && parts+=("$suffix")
+ if [[ -n "$forename" && "$forename" != "Unknown" ]]; then parts+=("$forename"); fi
+ if [[ -n "$initial"  && "$initial"  != "Unknown" ]]; then parts+=("$initial"); fi
+ if [[ -n "$surname"  && "$surname"  != "Unknown" ]]; then parts+=("$surname"); fi
+ if [[ -n "$suffix"   && "$suffix"   != "Unknown" ]]; then parts+=("$suffix"); fi
 
  if ((${#parts[@]} == 0)); then
   fullname="Unknown"
@@ -203,18 +207,18 @@ BuildFullName() {
  fi
 }
 
-# Build address (ignores Unknown)
+# Build address (ignores Unknown) - safe under ERR trap
 BuildAddress() {
  local parts=()
- [[ -n "$street" && "$street" != "Unknown" ]] && parts+=("$street")
- [[ -n "$town"   && "$town"   != "Unknown" ]] && parts+=("$town")
+ if [[ -n "$street" && "$street" != "Unknown" ]]; then parts+=("$street"); fi
+ if [[ -n "$town"   && "$town"   != "Unknown" ]]; then parts+=("$town"); fi
 
  local statezip=""
- [[ -n "$state" && "$state" != "Unknown" ]] && statezip="$state"
- [[ -n "$zip"   && "$zip"   != "Unknown" ]] && statezip="${statezip:+$statezip }$zip"
- [[ -n "$statezip" ]] && parts+=("$statezip")
+ if [[ -n "$state" && "$state" != "Unknown" ]]; then statezip="$state"; fi
+ if [[ -n "$zip"   && "$zip"   != "Unknown" ]]; then statezip="${statezip:+$statezip }$zip"; fi
+ if [[ -n "$statezip" ]]; then parts+=("$statezip"); fi
 
- [[ -n "$country" && "$country" != "Unknown" ]] && parts+=("$country")
+ if [[ -n "$country" && "$country" != "Unknown" ]]; then parts+=("$country"); fi
 
  if ((${#parts[@]} == 0)); then
   address="Unknown"
@@ -242,7 +246,6 @@ UpdateOS() {
  printf '\nOS update complete.\n\n'
 }
 
-# Initialize package list only when we are committed to a new install
 InitDhInstalled() {
  if (( dhinstalled_initialized == 0 )); then
   mkdir -p "$DigiHubHome"
@@ -261,13 +264,11 @@ RecordInstalledPkg() {
 PurgeExistingInstall() {
  deactivate >/dev/null 2>&1 || true
 
- # Preserve last install info for next reinstall (best-effort)
  if [[ -f "$HomePath/.dhinfo" ]]; then
   cp -f "$HomePath/.dhinfo" "$HomePath/.dhinfo.last" >/dev/null 2>&1 || true
  fi
  rm -f "$HomePath/.dhinfo" >/dev/null 2>&1 || true
 
- # Restore .profile backup if present
  if [[ -f "$HomePath/.profile.dh" ]]; then
   mv "$HomePath/.profile.dh" "$HomePath/.profile" >/dev/null 2>&1 || true
  fi
@@ -283,7 +284,6 @@ PurgeExistingInstall() {
  printf '\n' >> "$HomePath/.profile" 2>/dev/null || true
  rm -f "$HomePath/.profile.bak"* >/dev/null 2>&1 || true
 
- # Remove installed packages recorded during install (previous run)
  if [[ -f "$DigiHubHome/.dhinstalled" ]]; then
   while IFS= read -r pkg; do
    [[ -n "${pkg//[[:space:]]/}" ]] || continue
@@ -291,7 +291,6 @@ PurgeExistingInstall() {
     sudo apt-get -y purge "$pkg" >/dev/null 2>&1 || true
    fi
   done < "$DigiHubHome/.dhinstalled"
-
   rm -f "$DigiHubHome/.dhinstalled" >/dev/null 2>&1 || true
  else
   printf '%bWarning:%b %s\n' \
@@ -337,7 +336,6 @@ trap '_on_signal TERM' TERM
 
 ### MAIN SCRIPT ###
 
-# Check for Internet Connectivity
 if ! ping -c 1 -W 1 1.1.1.1 >/dev/null 2>&1; then
  printf '\nNo internet connectivity detected, which is a requirement for installation. Aborting.\n\n' >&2
  exit 1
@@ -356,21 +354,18 @@ if [[ -f "$HomePath/.profile" ]] && grep -qF "DigiHub" "$HomePath/.profile"; the
  fi
 fi
 
-# 0 or 1 arg allowed; 2+ is an error
 if (( $# > 1 )); then
  printf '\nError: too many arguments.\n' >&2
  printf 'Usage: %s [callsign]\n\n' "$0" >&2
  exit 1
 fi
 
-# If user provided a callsign, use it; otherwise prompt for one
 cs="$(normalize_cs "${1:-}")"
 if [[ -z "$cs" ]]; then
  read -r -p "Enter callsign (or type noFCC to skip lookup): " cs
  cs="$(normalize_cs "$cs")"
 fi
 
-# API lookup attempt; if it fails, fall back to manual entry (noFCC-mode)
 api_ok=0
 if [[ "$cs" != "NOFCC" ]]; then
  qth="$(curl -fsS "https://api.hamdb.org/v1/${cs}/csv/${cs}" 2>/dev/null || true)"
@@ -384,14 +379,12 @@ if [[ "$cs" != "NOFCC" ]]; then
 fi
 
 if (( api_ok == 0 )); then
- # Treat as manual flow (API failed or user requested noFCC)
  callsign="$cs"
  printf '\nNo online data available for "%b%s%b" (or lookup skipped).\n' "$colb" "${callsign^^}" "$ncol"
  printf 'You will need to enter required location details.\n\n'
  PromptEdit lat "Latitude (-90..90)" 1
  PromptEdit lon "Longitude (-180..180)" 1
 
- # Validate lat/lon and generate grid
  max_tries=5; tries=0
  while true; do
   set +e
@@ -450,26 +443,21 @@ if (( api_ok == 0 )); then
  printf '\n'
 fi
 
-# Normalize/ensure Unknown before review/edit (except initial/suffix)
 SetUnknownIfEmpty class expiry licstat forename surname street town state zip country
 
-# Final review/edit of captured values
 ReviewAndEdit
 BuildFullName
 BuildAddress
 
-# If reinstall was selected, purge ONLY NOW (after confirmation)
 if (( reinstall_selected == 1 )); then
  PurgeExistingInstall
  mkdir -p "$DigiHubHome"
 fi
 
-# Create a fresh package list for THIS install run (after purge decision)
 InitDhInstalled
 
 printf '\nThis may take some time...\n\n'
 
-# Update OS
 UpdateOS || printf '%bWarning:%b OS update failed; continuing installation.\n\n' "$colr" "$ncol" >&2
 
 printf 'Installing required packages... '
@@ -488,7 +476,6 @@ done
 
 printf 'Complete\n\n'
 
-# Setup and activate Python
 printf 'Configuring Python... '
 if [[ ! -d "$venv_dir" ]]; then
  python3 -m venv "$venv_dir" >/dev/null 2>&1
@@ -511,7 +498,6 @@ else
  printf 'Complete\n\n'
 fi
 
-# Check GPS device Installed
 printf 'Checking for GPS device... '
 set +e
 gps="$(python3 "$SrcPy/gpstest.py")"
@@ -557,17 +543,13 @@ case "$gpscode" in
   ;;
 esac
 
-# Generate aprspass and axnodepass
 aprspass="$(python3 "$SrcPy/aprspass.py" "$callsign")"
 axnodepass="$(openssl rand -base64 12 | tr -dc A-Za-z0-9 | head -c6)"
 
-# Copy files/directories into place & set permissions
 cp -R "$InstallPath/Files/"* "$DigiHubHome/"
 
-# Set execute bits (after copy)
 chmod +x "$ScriptPath/"* "$PythonPath/"*
 
-# Set Environment & PATH
 perl -i.dh -0777 -pe 's{\s+\z}{}m' "$HomePath/.profile" >/dev/null 2>&1 || true
 printf '\n' >> "$HomePath/.profile"
 
@@ -575,7 +557,6 @@ if [[ "${gpsport-}" == "nodata" ]]; then
  gpsport="nogps"
 fi
 
-# Append each line only once, each on its own line
 for line in \
  "# DigiHub Installation" \
  "export DigiHub=$DigiHubHome" \
@@ -598,7 +579,6 @@ done
 
 printf '\n' >> "$HomePath/.profile"
 
-# Write .dhinfo
 printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
  "$callsign" "$class" "$expiry" "$grid" "$lat" "$lon" "$licstat" \
  "$forename" "$initial" "$surname" "$suffix" "$street" "$town" "$state" "$zip" "$country" \
@@ -607,7 +587,6 @@ printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
 # Installation completed successfully; remove package list so it isn't misused later
 rm -f "$DigiHubHome/.dhinstalled" >/dev/null 2>&1 || true
 
-# Reboot post install
 while true; do
  printf '\nDigiHub successfully installed.\nReboot now (Y/n)? '
  read -n1 -r response
