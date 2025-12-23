@@ -26,11 +26,10 @@ InstallPath=$(pwd)
 callsign=""; class=""; expiry=""; grid=""; lat=""; lon=""; licstat=""; forename=""; initial=""; surname=""; suffix=""; street=""; town=""; state=""; zip=""; country=""; fullname=""; address=""
 
 # Source paths (before files are copied into place)
-SrcScripts="$InstallPath/Files/scripts"
 SrcPy="$InstallPath/Files/pyscripts"
 
-# Create DigiHubHome and .dhinstalled
-mkdir -p "$DigiHubHome"; > "$DigiHubHome/.dhinstalled"
+# Ensure base install directory exists early (but DO NOT touch .dhinstalled here)
+mkdir -p "$DigiHubHome"
 
 ### FUNCTIONS ###
 
@@ -143,7 +142,7 @@ ReviewAndEdit() {
      0)
       grid="$(python3 "$SrcPy/hamgrid.py" "$lat" "$lon")"
       if [[ -z $grid ]]; then
-       echo "Error: hamgrid.py produced no output."
+       printf 'Error: hamgrid.py produced no output.\n' >&2
        exit 4
       fi
       break
@@ -151,7 +150,7 @@ ReviewAndEdit() {
      1)
       ((tries++))
       if (( tries >= max_tries )); then
-       printf '\nToo many invalid attempts, aborting installation.\n'
+       printf '\nToo many invalid attempts, aborting installation.\n' >&2
        exit 1
       fi
       printf '\nInvalid latitude/longitude. Please try again:\n'
@@ -175,7 +174,7 @@ YnCont() {
   case $reply in
    [Yy]) return 0 ;;
    [Nn]|'') return 1 ;;
-   *) printf '%s\n' 'Please select (y/N): ' ;;
+   *) printf 'Invalid response. Select y or N.\n' ;;
   esac
  done
 }
@@ -238,12 +237,12 @@ PurgeExistingInstall() {
   mv "$HomePath/.profile.dh" "$HomePath/.profile" >/dev/null 2>&1 || true
  fi
 
- # Remove DigiHub-related lines from .profile in a single pass
  if [[ -f "$HomePath/.profile" ]]; then
-  local tmp
   tmp="$HomePath/.profile.tmp.$$"
-  grep -vF -e "DigiHub" -e "sysinfo" "$HomePath/.profile" > "$tmp" || true
-  mv "$tmp" "$HomePath/.profile" >/dev/null 2>&1 || true
+  set +e
+  grep -vF -e "DigiHub" -e "sysinfo" "$HomePath/.profile" > "$tmp"
+  set -e
+  mv "$tmp" "$HomePath/.profile"
  fi
 
  perl -i.bak -0777 -pe 's{\s+\z}{}m' "$HomePath/.profile" >/dev/null 2>&1 || true
@@ -264,7 +263,7 @@ PurgeExistingInstall() {
  else
   printf '%bWarning:%b %s\n' \
    "$colr" "$ncol" \
-   "Package list not found — those installed by DigiHub will NOT be removed." \
+   "Package list not found — packages installed by DigiHub will NOT be removed." \
    >&2
  fi
 
@@ -316,65 +315,70 @@ UpdateOS() {
 
 # Check for Internet Connectivity
 if ! ping -c 1 -W 1 1.1.1.1 >/dev/null 2>&1; then
- printf '\nNo internet connectivity detected. Internet access is required for installation. Aborting.\n\n'
+ printf '\nNo internet connectivity detected, which is a requirement for installation. Aborting.\n\n' >&2
  exit 1
 fi
 
 # 0 or 1 arg allowed; 2+ is an error
 if (( $# > 1 )); then
- printf '\nError: too many arguments.\n'
+ printf '\nError: too many arguments.\n' >&2
  printf 'Usage: %s [callsign|noFCC]\n\n' "$0" >&2
  exit 1
 fi
 
-# Default to NOFCC when no arg
-cs="$(normalize_cs "${1:-NOFCC}")"
+# Determine initial callsign mode
+arg_cs="${1:-}"
+cs=""
+force_manual=0
 
-# Check for valid callsign or NOFCC
-MAX_TRIES=5; tries=0
-while :; do
+if [[ -z "$arg_cs" ]]; then
+ # No argument: prompt for callsign; allow Enter to mean NOFCC/manual mode
+ read -r -p "Enter callsign (or press Enter for manual entry): " cs
+ cs="$(normalize_cs "${cs:-NOFCC}")"
+else
+ cs="$(normalize_cs "$arg_cs")"
+fi
 
- # NOFCC install / bypass online validation
- if [[ "$cs" == "NOFCC" ]]; then
-  break
- fi
+if [[ "$cs" == "NOFCC" ]]; then
+ force_manual=1
+fi
 
- # Check Valid Callsign (full US information available as checkcall script)
- qth="$(curl -fsS "https://api.hamdb.org/v1/${cs}/csv/${cs}" 2>/dev/null || true)"
- if [[ -n "$qth" ]]; then
-  IFS=',' read -r callsign class expiry grid lat lon licstat forename initial surname suffix street town state zip country <<< "$qth"
-  if [[ "$callsign" == "$cs" ]]; then
-   printf '\nThe Callsign "%b%s%b" was found. Please check the information below and edit as required.\n' "$colb" "$cs" "$ncol"
-   break
-  fi
- fi
-
- # Invalid
- ((tries++))
- if (( tries >= MAX_TRIES )); then
-  printf '\nThe Callsign "%b%s%b" is either not valid in the US or not found. Max attempts reached.\n\n' "$colb" "$cs" "$ncol" >&2
-  exit 1
- fi
- printf '\nThe Callsign "%b%s%b" is either not valid in the US or not found. Try again (or enter noFCC):\n' "$colb" "$cs" "$ncol"
- read -r -p "> " cs
- cs="$(normalize_cs "$cs")"
-done
-
-# If prior install info exists and we're doing NOFCC, offer to reuse it as defaults
-if [[ "$cs" == "NOFCC" && -f "$HomePath/.dhinfo.last" ]]; then
+# If prior install info exists and we're doing manual, offer to reuse it as defaults
+if (( force_manual == 1 )) && [[ -f "$HomePath/.dhinfo.last" ]]; then
  if YnCont "Previous install info found. Reuse it as defaults (y/N)? "; then
   IFS=',' read -r callsign class expiry grid lat lon licstat forename initial surname suffix street town state zip country < "$HomePath/.dhinfo.last" || true
  fi
 fi
 
-# noFCC information entry
-if [[ "$cs" == "NOFCC" ]]; then
- printf '\nPlease enter the requested information. Note that all fields are required unless stated otherwise.\n\n'
+# If we have a callsign and not forcing manual, try HamDB ONCE, else fall back to manual entry
+if (( force_manual == 0 )); then
+ qth="$(curl -fsS "https://api.hamdb.org/v1/${cs}/csv/${cs}" 2>/dev/null || true)"
+ if [[ -n "$qth" ]]; then
+  IFS=',' read -r callsign class expiry grid lat lon licstat forename initial surname suffix street town state zip country <<< "$qth"
+  if [[ "$callsign" == "$cs" ]]; then
+   printf '\nThe callsign "%b%s%b" was found. Please review the information below and edit as needed.\n' "$colb" "$cs" "$ncol"
+  else
+   printf '%bNotice:%b Callsign lookup did not match; continuing with manual entry.\n' "$colr" "$ncol" >&2
+   callsign="$cs"
+   force_manual=1
+  fi
+ else
+  printf '%bNotice:%b Callsign lookup failed or was unavailable; continuing with manual entry.\n' "$colr" "$ncol" >&2
+  callsign="$cs"
+  force_manual=1
+ fi
+else
+ callsign="$cs"
+fi
+
+# Manual entry path (includes non-US callsigns and API failures)
+if (( force_manual == 1 )); then
+ printf '\nPlease enter the requested information. All fields are required unless stated otherwise.\n\n'
  PromptEdit callsign "Callsign" 1
  PromptEdit lat "Latitude (-90..90)" 1
  PromptEdit lon "Longitude (-180..180)" 1
 
- # Validate lat lon and generate grid
+ # Validate lat/lon and generate grid
  max_tries=5; tries=0
  while true; do
   set +e
@@ -386,7 +390,7 @@ if [[ "$cs" == "NOFCC" ]]; then
    1)
     ((tries++))
     if (( tries >= max_tries )); then
-     printf '\nToo many invalid attempts, aborting installation.\n'
+     printf '\nToo many invalid attempts, aborting installation.\n' >&2
      exit 1
     fi
     printf '\nInvalid latitude/longitude. Please try again:\n'
@@ -400,12 +404,12 @@ if [[ "$cs" == "NOFCC" ]]; then
 
  grid="$(python3 "$SrcPy/hamgrid.py" "$lat" "$lon")"
  if [[ -z "$grid" ]]; then
-  echo "Error: hamgrid.py produced no output."
+  printf 'Error: hamgrid.py produced no output.\n' >&2
   exit 4
  fi
 
  printf '\n'
- if YnCont "Enter name details (All fields are Optional) - (y/N)? "; then
+ if YnCont "Enter name details (all fields optional) (y/N)? "; then
   printf '\n'
   PromptEdit forename "Forename" 0
   PromptEdit initial "Initial" 0
@@ -414,7 +418,7 @@ if [[ "$cs" == "NOFCC" ]]; then
  fi
 
  printf '\n'
- if YnCont "Enter license details? (All fields are Optional) - (y/N)? "; then
+ if YnCont "Enter license details (all fields optional) (y/N)? "; then
   printf '\n'
   PromptOpt class " License class: "
   PromptOpt expiry " Expiry date: "
@@ -422,7 +426,7 @@ if [[ "$cs" == "NOFCC" ]]; then
  fi
 
  printf '\n'
- if YnCont "Enter address details (All fields are Optional) - (y/N)? "; then
+ if YnCont "Enter address details (all fields optional) (y/N)? "; then
   printf '\n'
   PromptOpt street " Street: "
   PromptOpt town " Town/City: "
@@ -438,12 +442,12 @@ if [[ "$cs" == "NOFCC" ]]; then
  BuildFullName
  BuildAddress
 
- printf '\nDigiHub will be installed for callsign "%b%s%b"\nUsing the following details:\n\n' "$colb" "${callsign^^}" "$ncol"
+ printf '\nDigiHub will be installed for callsign "%b%s%b" using the following details:\n\n' "$colb" "${callsign^^}" "$ncol"
  printf 'License:\t%s - Expiry %s (%s)\nName:\t\t%s\nAddress:\t%s\nCoordinates:\tGrid: %s Latitude: %s Longitude: %s\n\n' \
   "$class" "$expiry" "$licstat" "$fullname" "$address" "$grid" "$lat" "$lon"
 fi
 
-# Ensure optional fields show as "Unknown" (instead of blank) before review/edit - except initial and suffix
+# Ensure optional fields show as Unknown (instead of blank) before review/edit - except initial and suffix
 SetUnknownIfEmpty class expiry licstat forename surname street town state zip country
 
 # Final review/edit of captured values
@@ -453,21 +457,24 @@ BuildAddress
 
 # Check for existing installation and warn
 if [[ -f "$HomePath/.profile" ]] && grep -qF "DigiHub" "$HomePath/.profile"; then
- printf '%bWarning!%b There appears to be an existing installation of DigiHub which will be replaced if you continue.\n' "$colr" "$ncol"
- if YnCont "Replace existing installation - Previous configuration information will be retained. (y/N)? "; then
+ printf '%bWarning!%b An existing DigiHub installation was detected and will be replaced if you continue.\n' "$colr" "$ncol"
+ if YnCont "Replace existing installation (previous configuration will be retained) (y/N)? "; then
   PurgeExistingInstall
-  mkdir -p "$DigiHubHome"; > "$DigiHubHome/.dhinstalled"
+  mkdir -p "$DigiHubHome"
  else
   exit 0
  fi
 fi
 
-printf '\nThis may take some time ...\n\n'
+# Create a fresh package list for THIS install run (do not clobber earlier runs prematurely)
+: > "$DigiHubHome/.dhinstalled"
+
+printf '\nThis may take some time...\n\n'
 
 # Update OS
 UpdateOS || printf '%bWarning:%b OS update failed; continuing installation.\n\n' "$colr" "$ncol" >&2
 
-printf 'Installing Required Packages ...'
+printf 'Installing required packages... '
 
 for pkg in python3 wget curl lastlog2 bc; do
  if dpkg -s "$pkg" >/dev/null 2>&1; then
@@ -484,17 +491,19 @@ done
 printf 'Complete\n\n'
 
 # Setup and activate Python
-printf 'Configuring Python ... '
+printf 'Configuring Python... '
 if [[ ! -d "$venv_dir" ]]; then
  python3 -m venv "$venv_dir" >/dev/null 2>&1
  source "$venv_dir/bin/activate"
+
  if ! dpkg -s python3-pip >/dev/null 2>&1; then
   sudo apt -y install python3-pip >/dev/null 2>&1 || true
   if dpkg -s python3-pip >/dev/null 2>&1; then
    grep -Fxq "python3-pip" "$DigiHubHome/.dhinstalled" || printf '%s\n' "python3-pip" >> "$DigiHubHome/.dhinstalled"
   fi
  fi
- printf 'Installing required Python packages ... '
+
+ printf 'Installing required Python packages... '
  sudo "$venv_dir/bin/pip3" install pynmea2 pyserial >/dev/null 2>&1
  printf 'Complete\n\n'
 else
@@ -503,7 +512,7 @@ else
 fi
 
 # Check GPS device Installed
-printf 'Checking for GPS device ... '
+printf 'Checking for GPS device... '
 set +e
 gps="$(python3 "$SrcPy/gpstest.py")"
 gpscode=$?
@@ -526,26 +535,25 @@ case "$gpscode" in
    "$gpsport" "$gpslat" "$gpslon" "$hamgrid" "$lat" "$lon" "$grid"
 
   while :; do
-   IFS= read -r -n1 -p $'\nWould you like to use the GPS location or the FCC/entered coordinates for the installation (c/f)? ' response </dev/tty
+   IFS= read -r -n1 -p $'\nUse GPS location or FCC/entered coordinates for installation (c/f)? ' response </dev/tty
    printf '\n'
    case "$response" in
     [Cc]) lat=$gpslat; lon=$gpslon; grid=$hamgrid; break ;;
     [Ff]) break ;;
-    *) printf 'Invalid response, please select c/C for Current or f/F for FCC\n' ;;
+    *) printf 'Invalid response. Select c/C for current or f/F for FCC/entered.\n' ;;
    esac
   done
   ;;
- 1) printf 'found on port %s no satellite fix.\n' "$gpsport" ;;
- 2) printf 'found on port %s no data is being received.\n' "$gpsport" ;;
- 3) printf 'not found!\n' ;;
+ 1) printf 'found on port %s but no satellite fix.\n' "$gpsport" ;;
+ 2) printf 'found on port %s but no data is being received.\n' "$gpsport" ;;
+ 3) printf 'not found.\n' ;;
 esac
 
 case "$gpscode" in
  1|2)
-  printf '\nPlease note: If the port is reported as "nodata", there may be artifacts causing inconsistent results.\n'
-  printf 'This is usually caused by a GPS device being attached and then removed, no GPS appears to be connected.\n'
-  printf '\nThe raw report from your GPS is Port: %s Status: %s\n' "$gpsport" "$gpsstatus"
-  printf '\nContinue with information from your home QTH - Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"
+  printf '\nNote: If the port is reported as no data, there may be artifacts from a previously attached GPS.\n'
+  printf 'Raw GPS report: Port: %s Status: %s\n' "$gpsport" "$gpsstatus"
+  printf 'Continuing with QTH coordinates: Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"
   YnCont "Continue (y/N)? "
   ;;
 esac
@@ -601,11 +609,11 @@ printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
 
 # Reboot post install
 while true; do
- printf '\nDigiHub was successfully installed.\nReboot now (Y/n)? '
+ printf '\nDigiHub successfully installed.\nReboot now (Y/n)? '
  read -n1 -r response
  case $response in
-  Y|y) sudo reboot; printf '\nRebooting\n'; exit 0 ;;
-  N|n) printf '\nPlease reboot before attempting to access DigiHub features\n\n'; exit 0 ;;
-  *) printf '\nInvalid response, please select Y/n\n' ;;
+  Y|y) sudo reboot; printf '\nRebooting...\n'; exit 0 ;;
+  N|n) printf '\nPlease reboot before using DigiHub.\n\n'; exit 0 ;;
+  *) printf '\nInvalid response. Select Y or n.\n' ;;
  esac
 done
