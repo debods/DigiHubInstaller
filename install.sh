@@ -187,59 +187,6 @@ ValidateAndGrid() {
  done
 }
 
-# Review & edit all captured values before installing
-ReviewAndEdit() {
- local choice
-
- while true; do
-  printf '\n================ REVIEW =================\n'
-  printf ' 1) Callsign:   %s\n' "${callsign^^}"
-  printf ' 2) Latitude:   %s\n' "$lat"
-  printf ' 3) Longitude:  %s\n' "$lon"
-  printf ' 4) Grid:       %s\n' "$grid"
-  printf ' 5) Class:      %s\n' "$class"
-  printf ' 6) Expiry:     %s\n' "$expiry"
-  printf ' 7) Lic Status: %s\n' "$licstat"
-  printf ' 8) Forename:   %s\n' "$forename"
-  printf ' 9) Initial:    %s\n' "$initial"
-  printf '10) Surname:    %s\n' "$surname"
-  printf '11) Suffix:     %s\n' "$suffix"
-  printf '12) Street:     %s\n' "$street"
-  printf '13) Town/City:  %s\n' "$town"
-  printf '14) State:      %s\n' "$state"
-  printf '15) ZIP/Postal: %s\n' "$zip"
-  printf '16) Country:    %s\n' "$country"
-  printf '========================================\n'
-
-  read -r -p $'\nEnter a number to edit (1-16), or press Enter to accept: ' choice
-  [[ -z "$choice" ]] && return 0
-
-  case "$choice" in
-   1) PromptEdit callsign "Callsign" 1 ;;
-   2) PromptEdit lat "Latitude (-90..90)" 1 ;;
-   3) PromptEdit lon "Longitude (-180..180)" 1 ;;
-   4) printf 'Grid is derived from Latitude/Longitude. Edit 2 or 3 to change it.\n' ;;
-   5) PromptEdit class "Class" 0 ;;
-   6) PromptEdit expiry "Expiry" 0 ;;
-   7) PromptEdit licstat "License Status" 0 ;;
-   8) PromptEdit forename "Forename" 0 ;;
-   9) PromptEdit initial "Initial" 0 ;;
-   10) PromptEdit surname "Surname" 0 ;;
-   11) PromptEdit suffix "Suffix" 0 ;;
-   12) PromptEdit street "Street" 0 ;;
-   13) PromptEdit town "Town/City" 0 ;;
-   14) PromptEdit state "State/Province" 0 ;;
-   15) PromptEdit zip "ZIP/Postal Code" 0 ;;
-   16) PromptEdit country "Country" 0 ;;
-   *) printf 'Invalid selection.\n' >&2 ;;
-  esac
-
-  if [[ "$choice" == 2 || "$choice" == 3 ]]; then
-   ValidateAndGrid || exit $?
-  fi
- done
-}
-
 # Try HamDB lookup; on success populate fields and return 0; on failure return 1
 LookupHamDB() {
  local cs="$1" qth=""
@@ -253,12 +200,32 @@ LookupHamDB() {
  return 0
 }
 
+# When callsign changes during review: repopulate from HamDB if found, else clear the dependent fields.
+RefreshFromHamDBOrClear() {
+ local newcs="$1"
+ if LookupHamDB "$newcs"; then
+  printf '\nHamDB data loaded for "%b%s%b".\n' "$colb" "$newcs" "$ncol"
+  return 0
+ fi
+
+ # Not found / API failed: clear fields that depend on callsign
+ printf '\n%bWarning:%b Callsign "%s" not found (or lookup failed). Clearing dependent fields for manual entry.\n' \
+  "$colr" "$ncol" "$newcs" >&2
+
+ class=""; expiry=""; grid=""; lat=""; lon=""; licstat=""
+ forename=""; initial=""; surname=""; suffix=""
+ street=""; town=""; state=""; zip=""; country=""
+ return 1
+}
+
 # Manual capture (used for NOFCC OR when API lookup fails)
 ManualCapture() {
  printf '\nPlease enter the requested information. All fields are required unless stated otherwise.\n\n'
 
  # Callsign is already known (or prompted) – but allow edit
  PromptEdit callsign "Callsign" 1
+ callsign="$(normalize_cs "$callsign")"
+
  PromptEdit lat "Latitude (-90..90)" 1
  PromptEdit lon "Longitude (-180..180)" 1
 
@@ -291,6 +258,85 @@ ManualCapture() {
   PromptOpt country " Country: "
  fi
  printf '\n'
+}
+
+# Review & edit all captured values before installing
+# Returns:
+#  0 = accept
+# 99 = user aborted
+ReviewAndEdit() {
+ local choice
+
+ while true; do
+  printf '\n================ REVIEW =================\n'
+  printf ' 1) Callsign:   %s\n' "${callsign^^}"
+  printf ' 2) Latitude:   %s\n' "$lat"
+  printf ' 3) Longitude:  %s\n' "$lon"
+  printf ' 4) Grid:       %s\n' "$grid"
+  printf ' 5) Class:      %s\n' "$class"
+  printf ' 6) Expiry:     %s\n' "$expiry"
+  printf ' 7) Lic Status: %s\n' "$licstat"
+  printf ' 8) Forename:   %s\n' "$forename"
+  printf ' 9) Initial:    %s\n' "$initial"
+  printf '10) Surname:    %s\n' "$surname"
+  printf '11) Suffix:     %s\n' "$suffix"
+  printf '12) Street:     %s\n' "$street"
+  printf '13) Town/City:  %s\n' "$town"
+  printf '14) State:      %s\n' "$state"
+  printf '15) ZIP/Postal: %s\n' "$zip"
+  printf '16) Country:    %s\n' "$country"
+  printf '========================================\n'
+
+  read -r -p $'\nEnter a number to edit (1-16), press Enter to accept, or type A to abort: ' choice
+  [[ -z "$choice" ]] && return 0
+
+  case "$choice" in
+   A|a|Q|q)
+    return 99
+    ;;
+   1)
+    PromptEdit callsign "Callsign" 1
+    callsign="$(normalize_cs "$callsign")"
+
+    # Callsign change behavior:
+    # - If found, repopulate all related fields from HamDB.
+    # - If not found, clear dependent fields, then require lat/lon (and generate grid).
+    if RefreshFromHamDBOrClear "$callsign"; then
+     # If HamDB gave coords, ensure grid is present; otherwise force regen
+     if [[ -n "${lat-}" && -n "${lon-}" && -z "${grid//[[:space:]]/}" ]]; then
+      ValidateAndGrid || exit $?
+     fi
+    else
+     printf '\nPlease enter coordinates for "%s".\n' "$callsign"
+     PromptEdit lat "Latitude (-90..90)" 1
+     PromptEdit lon "Longitude (-180..180)" 1
+     ValidateAndGrid || exit $?
+    fi
+    ;;
+   2)
+    PromptEdit lat "Latitude (-90..90)" 1
+    ValidateAndGrid || exit $?
+    ;;
+   3)
+    PromptEdit lon "Longitude (-180..180)" 1
+    ValidateAndGrid || exit $?
+    ;;
+   4) printf 'Grid is derived from Latitude/Longitude. Edit 2 or 3 to change it.\n' ;;
+   5) PromptEdit class "Class" 0 ;;
+   6) PromptEdit expiry "Expiry" 0 ;;
+   7) PromptEdit licstat "License Status" 0 ;;
+   8) PromptEdit forename "Forename" 0 ;;
+   9) PromptEdit initial "Initial" 0 ;;
+   10) PromptEdit surname "Surname" 0 ;;
+   11) PromptEdit suffix "Suffix" 0 ;;
+   12) PromptEdit street "Street" 0 ;;
+   13) PromptEdit town "Town/City" 0 ;;
+   14) PromptEdit state "State/Province" 0 ;;
+   15) PromptEdit zip "ZIP/Postal Code" 0 ;;
+   16) PromptEdit country "Country" 0 ;;
+   *) printf 'Invalid selection.\n' >&2 ;;
+  esac
+ done
 }
 
 UpdateOS() {
@@ -438,6 +484,11 @@ if [[ -f "$HomePath/.profile" ]] && grep -qF "DigiHub" "$HomePath/.profile"; the
  else
   exit 0
  fi
+
+ # Load existing install details as defaults (so the user sees the existing info)
+ if [[ -f "$HomePath/.dhinfo" ]]; then
+  IFS=',' read -r callsign class expiry grid lat lon licstat forename initial surname suffix street town state zip country < "$HomePath/.dhinfo" || true
+ fi
 fi
 
 # Determine initial callsign mode
@@ -448,49 +499,46 @@ if [[ -z "$arg_cs" && $REINSTALL_CHOSEN -eq 1 ]]; then
  arg_cs="$(normalize_cs "${DigiHubcall}")"
 fi
 
-# If still no parameter, prompt for callsign
+# If still no parameter and we didn't load callsign from dhinfo, prompt for callsign
 if [[ -z "$arg_cs" ]]; then
- PromptEdit callsign "Callsign (or NOFCC)" 1
+ if [[ -z "${callsign//[[:space:]]/}" ]]; then
+  PromptEdit callsign "Callsign (or NOFCC)" 1
+ fi
  arg_cs="$(normalize_cs "$callsign")"
 else
  callsign="$arg_cs"
 fi
 
+# If an existing install is being reinstalled AND user changes callsign later,
+# ReviewAndEdit will repopulate from HamDB (or clear for manual) automatically.
+
 # NOFCC explicitly forces manual entry
 if [[ "$arg_cs" == "NOFCC" ]]; then
  callsign="NOFCC"
- # If we have prior install info and user wants it, use it as defaults (manual mode)
- if [[ -f "$HomePath/.dhinfo.last" ]]; then
-  if YnCont "Previous install info found. Reuse it as defaults (y/N)? "; then
-   IFS=',' read -r callsign class expiry grid lat lon licstat forename initial surname suffix street town state zip country < "$HomePath/.dhinfo.last" || true
-  fi
- fi
-
  ManualCapture
-
 else
- # Try HamDB. If it fails, fall back to manual (throughout script).
- if LookupHamDB "$arg_cs"; then
-  printf '\nThe callsign "%b%s%b" was found. Please review the information below and edit as needed.\n' \
-   "$colb" "$arg_cs" "$ncol"
+ # If we already have populated defaults from .dhinfo (existing install) and we are running with no args,
+ # we will still offer HamDB refresh later if they change callsign. But if lat/lon/grid are missing now,
+ # try HamDB immediately.
+ if [[ -z "${lat//[[:space:]]/}" || -z "${lon//[[:space:]]/}" || -z "${grid//[[:space:]]/}" ]]; then
+  if LookupHamDB "$arg_cs"; then
+   printf '\nThe callsign "%b%s%b" was found. Please review the information below and edit as needed.\n' \
+    "$colb" "$arg_cs" "$ncol"
+  else
+   printf '\n%bWarning:%b Callsign lookup failed (or not found). Continuing with manual entry.\n\n' \
+    "$colr" "$ncol" >&2
+   callsign="$arg_cs"
+   ManualCapture
+  fi
  else
-  printf '\n%bWarning:%b Callsign lookup failed (or not found). Continuing with manual entry.\n\n' \
-   "$colr" "$ncol" >&2
-
-  # Preserve entered callsign and collect required fields
+  # We have complete defaults (existing install). If the user wants a fresh fetch, they can edit callsign in review.
   callsign="$arg_cs"
-  ManualCapture
  fi
 fi
 
-# If we got here via HamDB, ensure grid exists; if grid is missing, force validation/generation
-if [[ -z "${grid//[[:space:]]/}" ]]; then
- if [[ -n "${lat-}" && -n "${lon-}" ]]; then
-  ValidateAndGrid || exit $?
- else
-  # No coords available (should be rare); force manual
-  ManualCapture
- fi
+# Ensure grid exists if we have coords
+if [[ -n "${lat-}" && -n "${lon-}" && -z "${grid//[[:space:]]/}" ]]; then
+ ValidateAndGrid || exit $?
 fi
 
 # Ensure optional fields show as Unknown for review/summary (except initial/suffix)
@@ -498,8 +546,16 @@ SetUnknownIfEmpty class expiry licstat forename surname street town state zip co
 BuildFullName
 BuildAddress
 
-# Final review/edit
-ReviewAndEdit
+# Final review/edit (with abort option)
+if ! ReviewAndEdit; then
+ rc=$?
+ if [[ $rc -eq 99 ]]; then
+  printf '\nNo changes were made.\n'
+  exit 0
+ fi
+ exit "$rc"
+fi
+
 BuildFullName
 BuildAddress
 
