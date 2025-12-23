@@ -5,9 +5,10 @@ install.sh
 DigiHub installation and configuration script
 
 Version 1.0a
+
 Steve de Bode - KQ4ZCI - December 2025
 
-Input: callsign (optional)
+Input: callsign
 Output: none - interactive
 END
 
@@ -25,23 +26,26 @@ InstallPath="$(pwd)"
 # Source paths (before files are copied into place)
 SrcPy="$InstallPath/Files/pyscripts"
 
-# Captured/derived values
+# Captured info
 callsign=""; class=""; expiry=""; grid=""; lat=""; lon=""; licstat=""
 forename=""; initial=""; surname=""; suffix=""
 street=""; town=""; state=""; zip=""; country=""
 fullname=""; address=""
 
-# Reinstall / purge control
-EXISTING_INSTALL=0
-REINSTALL_CHOSEN=0
-PURGED=0
+# State
+DO_PURGE=0
+
+# Ensure base install directory exists early (but DO NOT touch .dhinstalled here)
+mkdir -p "$DigiHubHome"
 
 ### FUNCTIONS ###
 
-die() {
- local rc=${1:-1}; shift || true
- printf '%bError:%b %s\n' "$colr" "$ncol" "${*:-Unknown error}" >&2
- exit "$rc"
+# Normalize: trim leading/trailing whitespace + uppercase
+normalize_cs() {
+ local s="${1-}"
+ s="${s#"${s%%[![:space:]]*}"}"
+ s="${s%"${s##*[![:space:]]}"}"
+ printf '%s' "${s^^}"
 }
 
 # Optional values
@@ -59,24 +63,21 @@ PromptEdit() {
  while :; do
   current="${!var_name-}"
 
-  if [[ -n "$current" ]]; then
+  if [[ -n $current ]]; then
    read -rp "${prompt} [${current}]: " value
   else
    read -rp "${prompt}: " value
   fi
 
-  # Replace if user typed something
-  if [[ -n "$value" ]]; then
+  if [[ -n $value ]]; then
    printf -v "$var_name" '%s' "$value"
    return 0
   fi
 
-  # Keep existing if Enter and already set
-  if [[ -n "$current" ]]; then
+  if [[ -n $current ]]; then
    return 0
   fi
 
-  # Allow empty if not required
   if (( required == 0 )); then
    printf -v "$var_name" '%s' ""
    return 0
@@ -86,28 +87,28 @@ PromptEdit() {
  done
 }
 
-# Set variables to "Unknown" if empty/whitespace (safe under set -u)
-SetUnknownIfEmpty() {
- local name val
- for name in "$@"; do
-  val="${!name-}"
-  if [[ -z "${val//[[:space:]]/}" ]]; then
-   printf -v "$name" '%s' "Unknown"
-  fi
- done
-}
-
 # y/n; return 0 for yes.
 YnCont() {
  local prompt=${1:-"Continue (y/N)? "} reply=""
  while :; do
   read -n1 -rp "$prompt" reply
   printf '\n'
-  case "$reply" in
+  case $reply in
    [Yy]) return 0 ;;
    [Nn]|'') return 1 ;;
    *) printf 'Please select (y/N).\n' ;;
   esac
+ done
+}
+
+# Set variables to "Unknown" if they are empty/whitespace (safe under -u)
+SetUnknownIfEmpty() {
+ local v val
+ for v in "$@"; do
+  val="${!v-}"
+  if [[ -z ${val//[[:space:]]/} ]]; then
+   printf -v "$v" '%s' "Unknown"
+  fi
  done
 }
 
@@ -146,90 +147,78 @@ BuildAddress() {
  fi
 }
 
-# Normalize: trim leading/trailing whitespace + uppercase
-normalize_cs() {
- local s="$1"
- s="${s#"${s%%[![:space:]]*}"}"
- s="${s%"${s##*[![:space:]]}"}"
- printf '%s' "${s^^}"
+# Reset all fields that come from HamDB/manual details (keep callsign as-is)
+ResetDetailsKeepCallsign() {
+ class=""; expiry=""; grid=""; lat=""; lon=""; licstat=""
+ forename=""; initial=""; surname=""; suffix=""
+ street=""; town=""; state=""; zip=""; country=""
+ fullname=""; address=""
 }
 
-# Validate lat/lon and generate grid
-ValidateAndGrid() {
+# Try HamDB lookup for callsign in $1. If found, populate globals and return 0.
+# If not found (or API fails), do NOT abort; return 1 and leave existing details alone
+# (caller decides whether to clear fields / go manual).
+FetchHamDB() {
+ local cs="$1" qth="" got=""
+ qth="$(curl -fsS "https://api.hamdb.org/v1/${cs}/csv/${cs}" 2>/dev/null || true)"
+ [[ -n "$qth" ]] || return 1
+
+ # HamDB CSV: callsign,class,expiry,grid,lat,lon,licstat,forename,initial,surname,suffix,street,town,state,zip,country
+ IFS=',' read -r got class expiry grid lat lon licstat forename initial surname suffix street town state zip country <<< "$qth"
+
+ # Only accept if callsign matches exactly
+ if [[ "$got" != "$cs" ]]; then
+  return 1
+ fi
+
+ callsign="$got"
+ return 0
+}
+
+# Validate lat/lon and compute grid (aborts on repeated invalid entry)
+EnsureValidCoordsAndGrid() {
  local max_tries=5 tries=0 rc
+
  while true; do
   set +e
   python3 "$SrcPy/validcoords.py" "$lat" "$lon"
   rc=$?
   set -e
+
   case "$rc" in
-   0)
-    grid="$(python3 "$SrcPy/hamgrid.py" "$lat" "$lon")"
-    if [[ -z "$grid" ]]; then
-     printf 'Error: hamgrid.py produced no output.\n' >&2
-     return 4
-    fi
-    return 0
-    ;;
+   0) break ;;
    1)
     ((tries++))
     if (( tries >= max_tries )); then
-     printf '\nToo many invalid attempts. Aborting.\n' >&2
-     return 1
+     printf '\nToo many invalid attempts, aborting installation.\n' >&2
+     exit 1
     fi
     printf '\nInvalid latitude/longitude. Please try again:\n'
     PromptEdit lat "Latitude (-90..90)" 1
     PromptEdit lon "Longitude (-180..180)" 1
     ;;
-   2) printf 'Error: validcoords.py usage or internal error.\n' >&2; return 2 ;;
-   *) printf 'Error: validcoords.py returned unexpected exit code %s.\n' "$rc" >&2; return 3 ;;
+   2) printf 'Error: validcoords.py usage or internal error.\n' >&2; exit 2 ;;
+   *) printf 'Error: validcoords.py returned unexpected exit code %s.\n' "$rc" >&2; exit 3 ;;
   esac
  done
-}
 
-# Try HamDB lookup; on success populate fields and return 0; on failure return 1
-LookupHamDB() {
- local cs="$1" qth=""
- qth="$(curl -fsS "https://api.hamdb.org/v1/${cs}/csv/${cs}" 2>/dev/null || true)"
- [[ -z "$qth" ]] && return 1
-
- # HamDB CSV payload is: callsign,class,expiry,grid,lat,lon,licstat,forename,initial,surname,suffix,street,town,state,zip,country
- IFS=',' read -r callsign class expiry grid lat lon licstat forename initial surname suffix street town state zip country <<< "$qth" || return 1
-
- [[ "${callsign^^}" != "${cs^^}" ]] && return 1
- return 0
-}
-
-# When callsign changes during review: repopulate from HamDB if found, else clear the dependent fields.
-RefreshFromHamDBOrClear() {
- local newcs="$1"
- if LookupHamDB "$newcs"; then
-  printf '\nHamDB data loaded for "%b%s%b".\n' "$colb" "$newcs" "$ncol"
-  return 0
+ grid="$(python3 "$SrcPy/hamgrid.py" "$lat" "$lon")"
+ if [[ -z "$grid" ]]; then
+  printf 'Error: hamgrid.py produced no output.\n' >&2
+  exit 4
  fi
-
- # Not found / API failed: clear fields that depend on callsign
- printf '\n%bWarning:%b Callsign "%s" not found (or lookup failed). Clearing dependent fields for manual entry.\n' \
-  "$colr" "$ncol" "$newcs" >&2
-
- class=""; expiry=""; grid=""; lat=""; lon=""; licstat=""
- forename=""; initial=""; surname=""; suffix=""
- street=""; town=""; state=""; zip=""; country=""
- return 1
 }
 
-# Manual capture (used for NOFCC OR when API lookup fails)
-ManualCapture() {
+# Manual data entry flow (used for NOFCC or non-US/unfound calls)
+ManualEntryFlow() {
  printf '\nPlease enter the requested information. All fields are required unless stated otherwise.\n\n'
 
- # Callsign is already known (or prompted) – but allow edit
  PromptEdit callsign "Callsign" 1
  callsign="$(normalize_cs "$callsign")"
 
  PromptEdit lat "Latitude (-90..90)" 1
  PromptEdit lon "Longitude (-180..180)" 1
-
- ValidateAndGrid || exit $?
+ EnsureValidCoordsAndGrid
 
  printf '\n'
  if YnCont "Enter name details (all fields optional) (y/N)? "; then
@@ -243,7 +232,7 @@ ManualCapture() {
  printf '\n'
  if YnCont "Enter license details (all fields optional) (y/N)? "; then
   printf '\n'
-  PromptOpt class  " License class: "
+  PromptOpt class " License class: "
   PromptOpt expiry " Expiry date: "
   PromptOpt licstat " License status: "
  fi
@@ -252,20 +241,25 @@ ManualCapture() {
  if YnCont "Enter address details (all fields optional) (y/N)? "; then
   printf '\n'
   PromptOpt street " Street: "
-  PromptOpt town   " Town/City: "
-  PromptOpt state  " State/Province/County: "
-  PromptOpt zip    " ZIP/Postal Code: "
+  PromptOpt town " Town/City: "
+  PromptOpt state " State/Province/County: "
+  PromptOpt zip " ZIP/Postal Code: "
   PromptOpt country " Country: "
  fi
- printf '\n'
+
+ SetUnknownIfEmpty class expiry licstat forename surname street town state zip country
+ BuildFullName
+ BuildAddress
 }
 
 # Review & edit all captured values before installing
-# Returns:
-#  0 = accept
-# 99 = user aborted
+# - Enter: accept
+# - q: abort (no purge)
+# - If callsign is changed, ALWAYS refetch HamDB for the new callsign.
+#   If found: overwrite all related fields.
+#   If not found/API fails: clear details and require manual lat/lon, then optional name/license/address.
 ReviewAndEdit() {
- local choice
+ local choice newcs
 
  while true; do
   printf '\n================ REVIEW =================\n'
@@ -287,40 +281,66 @@ ReviewAndEdit() {
   printf '16) Country:    %s\n' "$country"
   printf '========================================\n'
 
-  read -r -p $'\nEnter a number to edit (1-16), press Enter to accept, or type A to abort: ' choice
-  [[ -z "$choice" ]] && return 0
+  read -r -p $'\nEnter a number to edit (1-16), press Enter to accept, or q to abort: ' choice
+  [[ -z $choice ]] && return 0
+  [[ $choice == [Qq] ]] && return 1
 
   case "$choice" in
-   A|a|Q|q)
-    return 99
-    ;;
    1)
-    PromptEdit callsign "Callsign" 1
-    callsign="$(normalize_cs "$callsign")"
+     PromptEdit callsign "Callsign" 1
+     newcs="$(normalize_cs "$callsign")"
+     callsign="$newcs"
 
-    # Callsign change behavior:
-    # - If found, repopulate all related fields from HamDB.
-    # - If not found, clear dependent fields, then require lat/lon (and generate grid).
-    if RefreshFromHamDBOrClear "$callsign"; then
-     # If HamDB gave coords, ensure grid is present; otherwise force regen
-     if [[ -n "${lat-}" && -n "${lon-}" && -z "${grid//[[:space:]]/}" ]]; then
-      ValidateAndGrid || exit $?
+     # Always refresh the rest from HamDB if possible (works on 2nd/3rd/etc changes)
+     if FetchHamDB "$callsign"; then
+      printf '\nThe callsign "%b%s%b" was found. Details were refreshed from HamDB.\n' "$colb" "$callsign" "$ncol"
+      # If HamDB returned coords, grid is already included, but we still ensure grid exists:
+      if [[ -z "${grid//[[:space:]]/}" || -z "${lat//[[:space:]]/}" || -z "${lon//[[:space:]]/}" ]]; then
+       # Unlikely, but handle gracefully: go manual for coords
+       printf '%bWarning:%b HamDB did not return usable coordinates. Please enter them.\n' "$colr" "$ncol" >&2
+       ResetDetailsKeepCallsign
+       PromptEdit lat "Latitude (-90..90)" 1
+       PromptEdit lon "Longitude (-180..180)" 1
+       EnsureValidCoordsAndGrid
+      fi
+     else
+      # Not found or API failed -> force manual details for this callsign
+      printf '\nThe callsign "%b%s%b" was not found (or the API failed). Switching to manual entry for this callsign.\n' "$colb" "$callsign" "$ncol"
+      ResetDetailsKeepCallsign
+      PromptEdit lat "Latitude (-90..90)" 1
+      PromptEdit lon "Longitude (-180..180)" 1
+      EnsureValidCoordsAndGrid
+
+      printf '\n'
+      if YnCont "Enter name details (all fields optional) (y/N)? "; then
+       printf '\n'
+       PromptEdit forename "Forename" 0
+       PromptEdit initial "Initial" 0
+       PromptEdit surname "Surname" 0
+       PromptEdit suffix "Suffix" 0
+      fi
+
+      printf '\n'
+      if YnCont "Enter license details (all fields optional) (y/N)? "; then
+       printf '\n'
+       PromptOpt class " License class: "
+       PromptOpt expiry " Expiry date: "
+       PromptOpt licstat " License status: "
+      fi
+
+      printf '\n'
+      if YnCont "Enter address details (all fields optional) (y/N)? "; then
+       printf '\n'
+       PromptOpt street " Street: "
+       PromptOpt town " Town/City: "
+       PromptOpt state " State/Province/County: "
+       PromptOpt zip " ZIP/Postal Code: "
+       PromptOpt country " Country: "
+      fi
      fi
-    else
-     printf '\nPlease enter coordinates for "%s".\n' "$callsign"
-     PromptEdit lat "Latitude (-90..90)" 1
-     PromptEdit lon "Longitude (-180..180)" 1
-     ValidateAndGrid || exit $?
-    fi
-    ;;
-   2)
-    PromptEdit lat "Latitude (-90..90)" 1
-    ValidateAndGrid || exit $?
-    ;;
-   3)
-    PromptEdit lon "Longitude (-180..180)" 1
-    ValidateAndGrid || exit $?
-    ;;
+     ;;
+   2) PromptEdit lat "Latitude (-90..90)" 1; EnsureValidCoordsAndGrid ;;
+   3) PromptEdit lon "Longitude (-180..180)" 1; EnsureValidCoordsAndGrid ;;
    4) printf 'Grid is derived from Latitude/Longitude. Edit 2 or 3 to change it.\n' ;;
    5) PromptEdit class "Class" 0 ;;
    6) PromptEdit expiry "Expiry" 0 ;;
@@ -336,21 +356,15 @@ ReviewAndEdit() {
    16) PromptEdit country "Country" 0 ;;
    *) printf 'Invalid selection.\n' >&2 ;;
   esac
+
+  # Normalize blanks for display consistency (except initial/suffix)
+  SetUnknownIfEmpty class expiry licstat forename surname street town state zip country
+  BuildFullName
+  BuildAddress
  done
 }
 
-UpdateOS() {
- if ! YnCont "Run OS update now (y/N)? "; then
-  printf 'Skipping OS update.\n\n'
-  return 0
- fi
- sudo apt-get update >/dev/null 2>&1 || return 1
- sudo DEBIAN_FRONTEND=noninteractive apt-get -y upgrade >/dev/null 2>&1 || return 1
- sudo apt-get -y autoremove >/dev/null 2>&1 || return 1
- printf '\nOS update complete.\n\n'
-}
-
-# Purge existing DigiHub install (used ONLY after user confirmation)
+# Purge existing DigiHub install but DO NOT exit
 PurgeExistingInstall() {
  deactivate >/dev/null 2>&1 || true
 
@@ -365,7 +379,6 @@ PurgeExistingInstall() {
   mv "$HomePath/.profile.dh" "$HomePath/.profile" >/dev/null 2>&1 || true
  fi
 
- # Remove DigiHub-related lines from .profile in a single pass
  if [[ -f "$HomePath/.profile" ]]; then
   local tmp="$HomePath/.profile.tmp.$$"
   set +e
@@ -378,7 +391,7 @@ PurgeExistingInstall() {
  printf '\n' >> "$HomePath/.profile" 2>/dev/null || true
  rm -f "$HomePath/.profile.bak"* >/dev/null 2>&1 || true
 
- # Remove installed packages recorded during *the last successful* DigiHub run
+ # Remove installed packages recorded during install
  if [[ -f "$DigiHubHome/.dhinstalled" ]]; then
   while IFS= read -r pkg; do
    [[ -n "${pkg//[[:space:]]/}" ]] || continue
@@ -398,59 +411,48 @@ PurgeExistingInstall() {
  sudo rm -rf -- "$DigiHubHome" >/dev/null 2>&1 || true
 }
 
-# Abort handler: only purge if we already purged (i.e., we’re cleaning a partial install)
+# Abort handler (safe: DO NOT purge here; we may have an existing good installation)
 AbortInstall() {
  local rc=${1:-1}
  printf '\nInstallation aborted.\n' >&2
-
- if (( PURGED == 1 )); then
-  # We already removed the prior install; best-effort cleanup of partial state.
-  PurgeExistingInstall || true
- fi
-
- exit "$rc"
+ return "$rc"
 }
 
+# ERR trap: print line + command, do not purge here.
 _on_err() {
  local rc=$?
- local lineno=${1:-"?"}
- local cmd=${2:-"?"}
- printf '\n%bFAILED%b rc=%s at line %s: %s\n' "$colr" "$ncol" "$rc" "$lineno" "$cmd" >&2
- return "$rc"
+ local line=${BASH_LINENO[0]:-?}
+ local cmd=${BASH_COMMAND:-?}
+ printf '\nFAILED rc=%s at line %s: %s\n' "$rc" "$line" "$cmd" >&2
+ exit "$rc"
 }
 
 _on_exit() {
  local rc=$?
- if [[ $rc -ne 0 ]]; then
-  AbortInstall "$rc"
- fi
- return 0
+ # If rc != 0, AbortInstall already ran via ERR/exit; just propagate.
+ return "$rc"
 }
 
-_on_signal() {
- local sig="$1"
- printf '\nInterrupted (%s).\n' "$sig" >&2
- # Same safety rule: only purge if we already purged.
- if (( PURGED == 1 )); then
-  PurgeExistingInstall || true
- fi
- case "$sig" in
-  INT) exit 130 ;;
-  TERM) exit 143 ;;
-  *) exit 1 ;;
- esac
-}
-
-trap '_on_err "$LINENO" "$BASH_COMMAND"' ERR
+trap _on_err ERR
 trap _on_exit EXIT
-trap '_on_signal INT' INT
-trap '_on_signal TERM' TERM
+
+UpdateOS() {
+ if ! YnCont "Run OS update now (y/N)? "; then
+  printf 'Skipping OS update.\n\n'
+  return 0
+ fi
+ sudo apt-get update >/dev/null 2>&1 || return 1
+ sudo DEBIAN_FRONTEND=noninteractive apt-get -y upgrade >/dev/null 2>&1 || return 1
+ sudo apt-get -y autoremove >/dev/null 2>&1 || return 1
+ printf '\nOS update complete.\n\n'
+}
 
 ### MAIN SCRIPT ###
 
-# Check for Internet Connectivity (still required, even if we fall back to manual)
+# Check for Internet Connectivity
 if ! ping -c 1 -W 1 1.1.1.1 >/dev/null 2>&1; then
- die 1 "No internet connectivity detected, which is a requirement for installation."
+ printf '\nNo internet connectivity detected, which is required for installation. Aborting.\n\n' >&2
+ exit 1
 fi
 
 # 0 or 1 arg allowed; 2+ is an error
@@ -460,17 +462,10 @@ if (( $# > 1 )); then
  exit 1
 fi
 
-# Ensure base directory exists (safe; no clobbering)
-mkdir -p "$DigiHubHome"
-
-# Detect existing installation BEFORE asking for callsign
+# Detect existing install BEFORE prompting, and delay purge until after user confirms details
 if [[ -f "$HomePath/.profile" ]] && grep -qF "DigiHub" "$HomePath/.profile"; then
- EXISTING_INSTALL=1
-
- # Your explicit rule:
  if [[ -z "${DigiHubcall-}" ]]; then
-  printf '%bError:%b Existing installation detected, but a reboot is required before changes can be made.\n' \
-   "$colr" "$ncol" >&2
+  printf '%bError:%b Existing installation detected, but a reboot is required before changes can be made.\n' "$colr" "$ncol" >&2
   exit 1
  fi
 
@@ -479,99 +474,94 @@ if [[ -f "$HomePath/.profile" ]] && grep -qF "DigiHub" "$HomePath/.profile"; the
  printf 'You can reinstall/replace it, or quit now.\n\n'
 
  if YnCont "Reinstall/replace existing DigiHub (y/N)? "; then
-  REINSTALL_CHOSEN=1
+  DO_PURGE=1
   printf '\nProceeding with reinstall. Existing installation will be removed after you confirm your details.\n\n'
  else
   exit 0
  fi
+fi
 
- # Load existing install details as defaults (so the user sees the existing info)
- if [[ -f "$HomePath/.dhinfo" ]]; then
-  IFS=',' read -r callsign class expiry grid lat lon licstat forename initial surname suffix street town state zip country < "$HomePath/.dhinfo" || true
+# Determine initial callsign input
+cs="$(normalize_cs "${1:-}")"
+
+# If no argument given, prompt for callsign (and then attempt HamDB; if not found => manual)
+if [[ -z "$cs" ]]; then
+ PromptEdit cs "Callsign (or enter noFCC)" 1
+ cs="$(normalize_cs "$cs")"
+fi
+
+# If prior install info exists and we're doing NOFCC/manual, offer to reuse it as defaults
+if [[ "$cs" == "NOFCC" && -f "$HomePath/.dhinfo.last" ]]; then
+ if YnCont "Previous install info found. Reuse it as defaults (y/N)? "; then
+  IFS=',' read -r callsign class expiry grid lat lon licstat forename initial surname suffix street town state zip country < "$HomePath/.dhinfo.last" || true
  fi
 fi
 
-# Determine initial callsign mode
-arg_cs="$(normalize_cs "${1:-}")"
-
-# If no parameter and reinstall chosen, default to existing DigiHubcall
-if [[ -z "$arg_cs" && $REINSTALL_CHOSEN -eq 1 ]]; then
- arg_cs="$(normalize_cs "${DigiHubcall}")"
-fi
-
-# If still no parameter and we didn't load callsign from dhinfo, prompt for callsign
-if [[ -z "$arg_cs" ]]; then
- if [[ -z "${callsign//[[:space:]]/}" ]]; then
-  PromptEdit callsign "Callsign (or NOFCC)" 1
- fi
- arg_cs="$(normalize_cs "$callsign")"
+# Populate details:
+# - If NOFCC => manual flow
+# - Else try HamDB. If found => great.
+# - If not found/API fail => treat as non-US/unlisted => manual coords + optional details.
+if [[ "$cs" == "NOFCC" ]]; then
+ callsign=""
+ ManualEntryFlow
 else
- callsign="$arg_cs"
-fi
-
-# If an existing install is being reinstalled AND user changes callsign later,
-# ReviewAndEdit will repopulate from HamDB (or clear for manual) automatically.
-
-# NOFCC explicitly forces manual entry
-if [[ "$arg_cs" == "NOFCC" ]]; then
- callsign="NOFCC"
- ManualCapture
-else
- # If we already have populated defaults from .dhinfo (existing install) and we are running with no args,
- # we will still offer HamDB refresh later if they change callsign. But if lat/lon/grid are missing now,
- # try HamDB immediately.
- if [[ -z "${lat//[[:space:]]/}" || -z "${lon//[[:space:]]/}" || -z "${grid//[[:space:]]/}" ]]; then
-  if LookupHamDB "$arg_cs"; then
-   printf '\nThe callsign "%b%s%b" was found. Please review the information below and edit as needed.\n' \
-    "$colb" "$arg_cs" "$ncol"
-  else
-   printf '\n%bWarning:%b Callsign lookup failed (or not found). Continuing with manual entry.\n\n' \
-    "$colr" "$ncol" >&2
-   callsign="$arg_cs"
-   ManualCapture
-  fi
+ callsign="$cs"
+ if FetchHamDB "$callsign"; then
+  printf '\nThe callsign "%b%s%b" was found. Please review the information below and edit as needed.\n' "$colb" "$callsign" "$ncol"
  else
-  # We have complete defaults (existing install). If the user wants a fresh fetch, they can edit callsign in review.
-  callsign="$arg_cs"
+  printf '\nThe callsign "%b%s%b" was not found (or the API failed). Continuing with manual entry for this callsign.\n' "$colb" "$callsign" "$ncol"
+  ResetDetailsKeepCallsign
+  PromptEdit lat "Latitude (-90..90)" 1
+  PromptEdit lon "Longitude (-180..180)" 1
+  EnsureValidCoordsAndGrid
+
+  printf '\n'
+  if YnCont "Enter name details (all fields optional) (y/N)? "; then
+   printf '\n'
+   PromptEdit forename "Forename" 0
+   PromptEdit initial "Initial" 0
+   PromptEdit surname "Surname" 0
+   PromptEdit suffix "Suffix" 0
+  fi
+
+  printf '\n'
+  if YnCont "Enter license details (all fields optional) (y/N)? "; then
+   printf '\n'
+   PromptOpt class " License class: "
+   PromptOpt expiry " Expiry date: "
+   PromptOpt licstat " License status: "
+  fi
+
+  printf '\n'
+  if YnCont "Enter address details (all fields optional) (y/N)? "; then
+   printf '\n'
+   PromptOpt street " Street: "
+   PromptOpt town " Town/City: "
+   PromptOpt state " State/Province/County: "
+   PromptOpt zip " ZIP/Postal Code: "
+   PromptOpt country " Country: "
+  fi
  fi
 fi
 
-# Ensure grid exists if we have coords
-if [[ -n "${lat-}" && -n "${lon-}" && -z "${grid//[[:space:]]/}" ]]; then
- ValidateAndGrid || exit $?
-fi
-
-# Ensure optional fields show as Unknown for review/summary (except initial/suffix)
+# Normalize optional fields for review display (except initial/suffix)
 SetUnknownIfEmpty class expiry licstat forename surname street town state zip country
 BuildFullName
 BuildAddress
 
-# Final review/edit (with abort option)
+# Final review/edit of captured values (allow abort)
 if ! ReviewAndEdit; then
- rc=$?
- if [[ $rc -eq 99 ]]; then
-  printf '\nNo changes were made.\n'
-  exit 0
- fi
- exit "$rc"
+ printf '\nNo changes were made.\n\n'
+ exit 0
 fi
 
-BuildFullName
-BuildAddress
-
-# If reinstall was chosen, do purge NOW (after confirmation/review), not earlier
-if (( REINSTALL_CHOSEN == 1 )); then
- if ! YnCont "Proceed with reinstall and remove the existing DigiHub installation (y/N)? "; then
-  printf '\nNo changes were made.\n'
-  exit 0
- fi
-
+# If we’re replacing an existing install, purge ONLY AFTER user confirmed details
+if (( DO_PURGE == 1 )); then
  PurgeExistingInstall
- PURGED=1
  mkdir -p "$DigiHubHome"
 fi
 
-# Create a fresh package list for THIS install run (do not clobber earlier runs prematurely)
+# Create a fresh package list for THIS install run
 : > "$DigiHubHome/.dhinstalled"
 
 printf '\nThis may take some time...\n\n'
@@ -599,7 +589,6 @@ printf 'Complete\n\n'
 printf 'Configuring Python... '
 if [[ ! -d "$venv_dir" ]]; then
  python3 -m venv "$venv_dir" >/dev/null 2>&1
- # shellcheck disable=SC1090
  source "$venv_dir/bin/activate"
 
  if ! dpkg -s python3-pip >/dev/null 2>&1; then
@@ -613,7 +602,6 @@ if [[ ! -d "$venv_dir" ]]; then
  sudo "$venv_dir/bin/pip3" install pynmea2 pyserial >/dev/null 2>&1
  printf 'Complete\n\n'
 else
- # shellcheck disable=SC1090
  source "$venv_dir/bin/activate"
  printf 'Complete\n\n'
 fi
@@ -628,7 +616,7 @@ IFS=',' read -r gpsport gpsstatus <<< "$gps"
 
 case "$gpscode" in
  0|1|2|3) : ;;
- *) die 1 "FATAL: gpscode invariant violated (value=$gpscode)" ;;
+ *) printf 'FATAL: gpscode invariant violated (value=%q)\n' "$gpscode" >&2; exit 1 ;;
 esac
 
 case "$gpscode" in
@@ -660,7 +648,7 @@ case "$gpscode" in
   printf '\nNote: If the port is reported as no data, there may be artifacts from a previously attached GPS.\n'
   printf 'Raw GPS report: Port: %s Status: %s\n' "$gpsport" "$gpsstatus"
   printf 'Continuing with QTH coordinates: Latitude: %s Longitude: %s Grid: %s\n' "$lat" "$lon" "$grid"
-  YnCont "Continue (y/N)? " || exit 0
+  YnCont "Continue (y/N)? "
   ;;
 esac
 
@@ -671,14 +659,13 @@ axnodepass="$(openssl rand -base64 12 | tr -dc A-Za-z0-9 | head -c6)"
 # Copy files/directories into place & set permissions
 cp -R "$InstallPath/Files/"* "$DigiHubHome/"
 
-# Set execute bits (after copy)
 chmod +x "$ScriptPath/"* "$PythonPath/"*
 
 # Set Environment & PATH
 perl -i.dh -0777 -pe 's{\s+\z}{}m' "$HomePath/.profile" >/dev/null 2>&1 || true
 printf '\n' >> "$HomePath/.profile"
 
-if [[ "${gpsport:-}" == "nodata" ]]; then
+if [[ "${gpsport-}" == "nodata" ]]; then
  gpsport="nogps"
 fi
 
@@ -710,13 +697,11 @@ printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
  "$forename" "$initial" "$surname" "$suffix" "$street" "$town" "$state" "$zip" "$country" \
  > "$HomePath/.dhinfo"
 
-# Web Server (placeholder)
-
 # Reboot post install
 while true; do
  printf '\nDigiHub successfully installed.\nReboot now (Y/n)? '
  read -n1 -r response
- case "$response" in
+ case $response in
   Y|y) sudo reboot; printf '\nRebooting...\n'; exit 0 ;;
   N|n) printf '\nPlease reboot before using DigiHub.\n\n'; exit 0 ;;
   *) printf '\nInvalid response. Select Y or n.\n' ;;
