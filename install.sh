@@ -556,7 +556,7 @@ fi
 # If we still don't have a callsign (fresh run), prompt
 if [[ -z "${callsign//[[:space:]]/}" || "$callsign" == "NOFCC" ]]; then
  if (( EXISTING_INSTALL == 0 )); then
-  printf '/nDigiHub Installation./n/n'
+  printf '\nDigiHub Installation.\n\n'
   PromptEdit callsign "Callsign (or enter NOFCC)" 1
   callsign="$(normalize_cs "$callsign")"
  fi
